@@ -17,6 +17,7 @@
 ;; ============================================================================
 
 ;; Set up package manager...using Elpaca.
+;; Do remember to update the packages using elpaca-update.
 
 ;;; Code:
 (defvar elpaca-installer-version 0.10)
@@ -199,22 +200,24 @@
 
 (defvar-keymap Angelique!--map
   :doc "♡(✿ᴗ͈ˬᴗ͈)♡*~May you have sweet dreams, princess!~*"
-     "n" #'backward-char
-     "e" #'next-line
-     "i" #'previous-line
-     "o" #'forward-char
-     "l" #'recenter-top-bottom
-     "u" #'undo
-     "C-a" #'move-beginning-of-line
-     "C-e" #'move-end-of-line
-     "M-a" #'backward-sentence
-     "M-e" #'forward-sentence
-     "M-o" #'right-word
-     "M-n" #'left-word
-     "M-s" #'backward-sexp
-     "M-t" #'forward-sexp
-     "M-d" #'sp-slurp-hybrid-sexp
-     "M-c" #'sp-backward-barf-sexp)
+  "n" #'backward-char
+  "C-n" #'backward-char ;; for shift-selection to work.
+  "e" #'next-line
+  "i" #'previous-line
+  "o" #'forward-char
+  "C-o" #'forward-char
+  "l" #'recenter-top-bottom
+  "u" #'undo
+  "C-a" #'move-beginning-of-line
+  "C-e" #'move-end-of-line
+  "M-a" #'backward-sentence
+  "M-e" #'forward-sentence
+  "M-o" #'right-word
+  "M-n" #'left-word
+  "M-s" #'backward-sexp
+  "M-t" #'forward-sexp
+  "M-d" #'sp-slurp-hybrid-sexp
+  "M-c" #'sp-backward-barf-sexp)
 
 (defun Angelique!--normal-cursor ()
   "Cursor indicator for Angelique!"
@@ -304,8 +307,17 @@
 ;;  Utilities.
 ;; ============================================================================
 
-(elpaca transient)
-(elpaca (magit :wait t))
+(use-package transient
+  :ensure t)
+
+(use-package magit
+  :ensure t
+  :commands magit
+  :after transient)
+
+(use-package forge
+  :ensure t
+  :after magit)
 
 (use-package compat
   :ensure t)
@@ -335,7 +347,8 @@
   (prog-mode . symbol-overlay-mode))
 
 (use-package browser-hist
-  :ensure t)
+  :ensure t
+  :commands browser-hist)
 
 (use-package consult
   :ensure t
@@ -377,10 +390,12 @@
   :ensure t)
 
 (use-package sudo-edit
-  :ensure t)
+  :ensure t
+  :commands sudo-edit)
 
 (use-package vundo
-  :ensure t)
+  :ensure t
+  :commands vundo)
 
 (use-package vterm
   :ensure t
@@ -405,7 +420,7 @@
 (use-package which-key
   :ensure nil
   :commands which-key-mode
-  :diminish which-key-mode
+  :diminish
   :hook
   (elpaca-after-init . which-key-mode))
 
