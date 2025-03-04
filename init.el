@@ -313,15 +313,19 @@
 (use-package magit
   :ensure t
   :commands magit
-  :after transient)
+  :after transient
+  :bind (:map magit-mode-map
+	      ("M-n" . nil)
+	      ("M-f" . magit-section-forward-sibling)))
 
 (use-package forge
   :ensure t
+  :commands forge
   :after magit)
 
 (use-package compat
   :ensure t)
-
+    
 (use-package ace-window
   :ensure t
   :commands ace-window
