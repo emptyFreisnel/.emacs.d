@@ -64,6 +64,8 @@
 (setq set-language-environment "UTF-8")
 (setq default-input-method nil)
 
+(setq enable-recursive-minibuffers t)
+
 ;; ============================================================================
 ;;  Startup
 ;; ============================================================================
