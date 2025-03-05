@@ -316,7 +316,13 @@
   :after transient
   :bind (:map magit-mode-map
 	      ("M-n" . nil)
-	      ("M-f" . magit-section-forward-sibling)))
+	      ("M-f" . magit-section-forward-sibling)
+	      :map magit-log-mode-map
+	      ("M-n" . nil)
+	      ("M-f" . magit-section-forward-sibling)
+	      :map git-commit-mode-map
+	      ("M-n" . nil)
+	      ("M-f" . git-commit-next-message)))
 
 (use-package forge
   :ensure t
@@ -357,7 +363,7 @@
 (use-package consult
   :ensure t
   :bind (;; A recursive grep
-	 ("M-s M-g" . consult-grep)
+	 ("M-s M-g" . consult-ripgrep)
 	 ("M-s M-f" . consult-find)
 	 ("M-s M-o" . consult-outline)
 	 ("M-s M-l" . consult-line)
@@ -509,15 +515,17 @@
   (add-hook 'completion-at-point-functions #'cape-elisp-block)
   (add-hook 'completion-at-point-functions #'cape-dict))
 
-(use-package flycheck
-  :ensure t
-  :commands global-flycheck-mode
-  :config
-  (setq flycheck-idle-change-delay 0.25)
-  :hook
-  (elpaca-after-init . global-flycheck-mode))
+(use-package flymake
+  :ensure nil
+  :hook ((prog-mode emacs-lisp-mode) . flymake-mode))
+
+(use-package yasnippet
+  :ensure t)
 
 (use-package lsp-mode
+  :ensure t)
+
+(use-package company
   :ensure t)
 
 ;; ============================================================================
@@ -530,6 +538,8 @@
   :config
   (setq treesit-auto-install 'prompt)
   (global-treesit-auto-mode 1))
+
+
 
 ;; ============================================================================
 ;;  Configure Dired / dirvish and turning on server mode.
