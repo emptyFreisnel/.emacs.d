@@ -79,6 +79,13 @@
   (add-hook 'emacs-lisp-mode-hook #'compile-angel-on-save-local-mode))
 
 ;; ============================================================================
+;;  A clean emacs is a happy emacs! which makes ya girl happy!
+;; ============================================================================
+
+(use-package no-littering
+  :ensure t)
+
+;; ============================================================================
 ;;  Aesthetics (themes, icons, fonts and bars)...important!!!
 ;; ============================================================================
 
@@ -114,7 +121,7 @@
 
 (use-package indent-bars
   :ensure t
-  :hook ((prog-mode nix-mode) . indent-bars-mode))
+  :hook ((prog-mode) . indent-bars-mode))
 
 (use-package rainbow-delimiters
   :ensure t
@@ -128,13 +135,17 @@
 ;; TODO: fix with better fonts for Org Mode and the like.
 (set-frame-font "Fira Code Nerd Font 11" nil t)
 
-(defun Angelique!--transparency ()
-    "Toggle transparency."
-    (interactive)
-    (let ((alpha-transparency 75))
-      (pcase (frame-parameter nil 'alpha-background)
-	(alpha-transparency (set-frame-parameter nil 'alpha-background 100))
-	(t (set-frame-parameter nil 'alpha-background alpha-transparency)))))
+;; ============================================================================
+;;  Transparency...
+;; ============================================================================
+
+;; (defun Angelique!--transparency ()
+;;     "Toggle transparency."
+;;     (interactive)
+;;     (let ((alpha-transparency 75))
+;;       (pcase (frame-parameter nil 'alpha-background)
+;; 	(alpha-transparency (set-frame-parameter nil 'alpha-background 100))
+;; 	(t (set-frame-parameter nil 'alpha-background alpha-transparency)))))
 
 ;; ============================================================================
 ;;  Wish emacs can expose more properties to font attributes
@@ -172,6 +183,10 @@
 ;; ============================================================================
 
 (setq custom-file null-device) ;; not using customize feature.
+
+(require 'server)
+(unless (server-running-p)
+  (server-start))
 
 ;; ============================================================================
 ;;  Prevent the cursor from going into the minibuffer prompt.
@@ -228,7 +243,7 @@
 		      :foreground "cyan")
   (message "... Angelique! deactivated ... ♡(✿ᴗ͈ˬᴗ͈)♡* "))
 
-(defun Angelique! ()
+(defun Angelique!--keybindings ()
   "~Dream the good dream, like a good pretty-princess should!♡(✿ᴗ͈ˬᴗ͈)♡*~."
   (interactive)
   (set-cursor-color "#FF83FA")
@@ -242,7 +257,7 @@
 		     #'Angelique!--normal-cursor))
 
 (define-key global-map (kbd "C-x m") nil)
-(define-key global-map (kbd "M-n") #'Angelique!)
+(define-key global-map (kbd "M-n") #'Angelique!--keybindings)
 (define-key minibuffer-mode-map (kbd "M-n") nil)
 (define-key minibuffer-mode-map (kbd "M-f") 'next-history-element)
 
@@ -262,7 +277,7 @@
 ;;  Better keyboard quit.
 ;; ============================================================================
 
-(defun fres/keyboard-quit-dwim ()
+(defun Angelique!--keyboard-quit-dwim ()
   
   "Do-What-I-Mean behaviour for a general `keyboard-quit'.
  
@@ -289,7 +304,7 @@
    (t
     (keyboard-quit))))
 
-(define-key global-map (kbd "C-g") #'fres/keyboard-quit-dwim)
+(define-key global-map (kbd "C-g") #'Angelique!--keyboard-quit-dwim)
 
 (use-package delsel
   :ensure nil
@@ -434,6 +449,11 @@
   :hook
   (elpaca-after-init . which-key-mode))
 
+(use-package winner-mode
+  :ensure nil
+  :hook
+  (elpaca-after-init . winner-mode))
+
 ;; ============================================================================
 ;;  Configure the minibuffer and LSP completions.
 ;; ============================================================================
@@ -520,25 +540,94 @@
   :hook ((prog-mode emacs-lisp-mode) . flymake-mode))
 
 (use-package yasnippet
-  :ensure t)
+  :ensure t
+  :config
+  (with-eval-after-load 'yasnippet
+    (yas-reload-all)))
 
 (use-package lsp-mode
   :ensure t)
 
-(use-package company
+(use-package company ;; we are using cape instead as frontend.
   :ensure t)
 
 ;; ============================================================================
 ;;  Treesitter...
+;;  Do take a look at treesit-auto for some ideas.
 ;; ============================================================================
 
-(require 'treesit)
-(use-package treesit-auto
-  :ensure t
-  :config
-  (setq treesit-auto-install 'prompt)
-  (global-treesit-auto-mode 1))
+(defun Angelique!--treesit (language-specs)
+  
+  "Batch configure Tree-sitter for multiple LANGUAGE-SPECS.
 
+This function will (hopefully) fallback to the
+original mode if there is no ts-mode.
+
+Each spec(s) is a list corresponding to the arguments stated in the
+cons cells of treesit-language-source-alist:
+
+`(LANG (URL &OPTIONAL[REVISION SOURCE-DIR CC C++ COMMIT]) EXT ORIG-MODE)'.
+
+- `LANG': The specified programming language to install the treesitter grammars.
+
+- `URL': The source of the treesitter grammars:
+  &OPTIONAL
+    `REVISION'  : Git tag or branch of the desired version.
+                  Defaults to the latest default branch.
+    `SOURCE-DIR': The treesitter parser (usually in `src').  Defaults to `src'.
+    `CC'and`C++': Compilers for C and C++.
+                  Defaults to \"cc\" and \"c++\" respectively.
+    `COMMIT'    : If non-nil, checks out the commit hash while cloning the repo.
+
+For auto-mode-alist and major-mode-remap-alist,
+this function takes the following as arguments.
+
+- `EXT': The file-extension of that particular programming
+         language that treesitter will be parsing.
+- `ORIG-MODE': The original major-mode that treesitter will replace."
+  
+  (require 'treesit)
+  (dolist (spec language-specs)
+    (cl-destructuring-bind (lang (url &optional rev src cc c++ commit)
+				 ext orig-mode) spec
+      (add-to-list 'treesit-language-source-alist
+		   `(,lang . (,url ,@(if rev (list rev) nil) ,@(if src (list src) nil)
+				   ,@(if cc (list cc) nil) ,@(if c++ (list c++) nil)
+				   ,@(if commit (list commit) nil))))
+      (unless (treesit-ready-p lang)
+	(message "Installing %s Tree-sitter grammar..." lang)
+	(treesit-install-language-grammar lang))
+      (when (treesit-ready-p lang)
+	(let ((ts-mode (intern (format "%s-ts-mode" lang))))
+	  (add-to-list 'auto-mode-alist
+		       `(,ext . (lambda () (if (fboundp ',ts-mode) (,ts-mode) (,orig-mode)))))
+	  (when (fboundp ts-mode)
+	    (add-to-list 'major-mode-remap-alist `(,orig-mode . ,ts-mode))))))))
+
+(Angelique!--treesit
+ '((python
+    ("https://github.com/tree-sitter/tree-sitter-python") "\\.py\\'"
+    python-mode)
+   (elisp
+    ("https://github.com/Wilfred/tree-sitter-elisp") "\\.el\\'"
+    emacs-lisp-mode)
+   (c
+    ("https://github.com/tree-sitter/tree-sitter-c") "\\.c\\'"
+    c-mode)))
+
+;; (setq treesit-language-source-alist
+;;       '((elisp . ("https://github.com/Wilfred/tree-sitter-elisp"))
+;; 	(python . ("https://github.com/tree-sitter/tree-sitter-python"))))
+
+;; (dolist (source treesit-language-source-alist)
+;;   (unless (treesit-ready-p (car source))
+;;     (treesit-install-language-grammar (car source))))
+
+;; (add-to-list 'auto-mode-alist '("\\.py\\'" . python-mode))
+;; (add-to-list 'major-mode-remap-alist '(python-mode . python-ts-mode))
+
+;; (add-to-list 'auto-mode-alist '("\\.el\\'" . elisp-ts-mode))
+;; (add-to-list 'major-mode-remap-alist '(emacs-lisp-mode . elisp-ts-mode))
 
 
 ;; ============================================================================
@@ -549,7 +638,6 @@
   :ensure t
   :init
   (dirvish-override-dired-mode)
-  (server-start)
   :bind
   ( :map dirvish-mode-map
     ("<tab>" . dirvish-subtree-toggle)
@@ -587,11 +675,33 @@
 ;;  Emacs application framework for integrated browser.
 ;; ============================================================================
 
-;; (use-package eaf
-;; :ensure (:host github
-;;           :repo "emacs-eaf/emacs-application-framework"
-;;           :files (:defaults ().)))
+;; (defun EAF-source-and-install ()
+;;   "Git clone emacs-application-framework if not currently available."
+;;   (let* ((emacs-eaf-dir (expand-file-name
+;; 			 "emacs-application-framework/" user-emacs-directory))
+;; 	 (install-script (expand-file-name "./install-eaf.py" emacs-eaf-dir))
+;; 	 (sentinel-file (expand-file-name ".eaf-installed.txt" emacs-eaf-dir))))
+;;   (unless (file-exists-p emacs-eaf-dir)
+;;     (make-directory emacs-eaf-dir)
+;;     (message "Cloning EAF from source...")
+;;     (async-shell-command (format "git clone --depth=1 -b master
+;; https://github.com/emacs-eaf/emacs-application-framework.git %s"
+;; 			   emacs-eaf-dir))
+;;     (message "EAF has been cloned!"))
+;;   (unless (file-exists-p sentinel-file)
+;;     (when (file-exists-p install-script)
+;;       (message "Installing EAF...")
+;;       (async-shell-command (format "chmod +x ./install-eaf.py"))
+;;       (message "Install script is now executable!")
+;;       (async-shell-command (format "./install-eaf.py")))))
 
+;; (use-package eaf
+;;   :ensure nil
+;;   :load-path
+;;   :config
+;;   (require 'eaf)
+;;   (require 'eaf-browser))
+		   
 ;; This should be in the last of the init.el file.
 
 (use-package envrc
