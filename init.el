@@ -65,6 +65,9 @@
 
 ;; TODO: reminder to have ensure t be popped up upon completion of config.
 
+;; (add-hook 'save-buffers-kill-emacs-hook
+;; (lambda ()))
+
 ;; ============================================================================
 ;;  Auto garbage collection when emacs loses focus and using the minibuffer.
 ;;  See: https://github.com/MatthewZMD/.emacs.d/blob/master/init.el
@@ -219,6 +222,10 @@ If you experience stuttering, increase this.")
 (unless (server-running-p)
   (server-start))
 
+(defvar Angelique! (expand-file-name "Angelique!/" user-emacs-directory))
+(unless (file-exists-p Angelique!)
+  (make-directory Angelique! t))
+
 ;; ============================================================================
 ;;  Prevent the cursor from going into the minibuffer prompt.
 ;; ============================================================================
@@ -232,17 +239,6 @@ If you experience stuttering, increase this.")
 ;;  The Angelique! keybindings are transient...
 ;;  TODO: To switch to Canary keyboard layout.
 ;; ============================================================================
-
-;; This is left for discoverbility.
-(defun repeatify (repeatify-map)
- "Set the `repeat-map' property on all commands bound in REPEATIFY-MAP."
- (named-let process ((keymap (symbol-value repeatify-map)))
-   (map-keymap
-    (lambda (_key cmd)
-      (cond
-       ((symbolp cmd) (put cmd 'repeat-map repeatify-map))
-       ((keymapp cmd) (process cmd))))
-    keymap)))
 
 (defvar-keymap Angelique!--map
   :doc "♡(✿ᴗ͈ˬᴗ͈)♡*~May you have sweet dreams, princess!~*"
@@ -312,18 +308,19 @@ If you experience stuttering, increase this.")
   
   "Do-What-I-Mean behaviour for a general `keyboard-quit'.
  
-  The generic `keyboard-quit' does not do the
-  expected thing when the minibuffer is open.
+The generic `keyboard-quit' does not do the
+expected thing when the minibuffer is open.
 
-  Whereas we want it to close the minibuffer,
-  even without explicitly focusing it.
+Whereas we want it to close the minibuffer,
+even without explicitly focusing it.
 
-  The DWIM behaviour of this command is as follows:
+The DWIM behaviour of this command is as follows:
 
-  - When the region is active, disable it.
-  - When a minibuffer is open, but not focused, close the minibuffer.
-  - When the Completions buffer is selected, close it.
-  - In every other case use the regular `keyboard-quit'."
+- When the region is active, disable it.
+- When a minibuffer is open, but not focused, close the minibuffer.
+- When the Completions buffer is selected, close it.
+- In every other case use the regular `keyboard-quit'."
+  
   (interactive)
   (cond
    ((region-active-p)
@@ -603,7 +600,7 @@ stated in the cons cells of `treesit-language-source-alist':
 
 - `LANG': The specified programming language to install
           the tree-sitter grammars.
-- `URL' : The source of the tree-sitter grammars.
+	- `URL' : The source of the tree-sitter grammars.
   &OPTIONAL:
   -  `REVISION'  : Git tag or branch of the desired version.
                    Defaults to the latest default branch.
@@ -624,7 +621,7 @@ this function takes the following as arguments.
   - `TS-MODE-NAME': This is for edge cases where the string does not
                     translate well to the particular tree-sitter `-ts-mode'
                     when passing through `lang', for example see `cpp' and `C++'."
- 
+  (interactive)
   (require 'treesit)
   (dolist (spec language-specs)
     (cl-destructuring-bind (lang (url &optional rev src cc c++ commit)
@@ -705,38 +702,10 @@ this function takes the following as arguments.
 ;;  Emacs application framework for integrated browser.
 ;; ============================================================================
 
-;; (defun EAF-source-and-install ()
-;;   "Git clone emacs-application-framework if not currently available.
-;;    This process is run asynchonously (hopefully...)"
-;;   (let* ((emacs-eaf-dir (expand-file-name
-;; 			 "emacs-application-framework/" user-emacs-directory))
-;; 	 (install-script (expand-file-name "./install-eaf.py" emacs-eaf-dir))
-;; 	 (sentinel-file (expand-file-name ".eaf-installed.txt" emacs-eaf-dir))))
-;;   (unless (file-exists-p emacs-eaf-dir)
-;;     (make-directory emacs-eaf-dir)
-;;     (message "Cloning EAF from source...")
-;;     (async-shell-command (format "git clone --depth=1 -b master
-;; https://github.com/emacs-eaf/emacs-application-framework.git %s"
-;; 			   emacs-eaf-dir))
-;;     (message "EAF has been cloned!"))
-;;   (unless (file-exists-p sentinel-file)
-;;     (when (file-exists-p install-script)
-;;       (message "Installing EAF...")
-;;       (async-shell-command (format "chmod +x ./install-eaf.py"))
-;;       (message "Install script is now executable!")
-;;       (async-shell-command (format "./install-eaf.py")))))
-
-;; (add-hook 'elpaca-after-init-hook #'EAF-source-and-install)
-
-;; (use-package eaf
-;;   :ensure nil
-;;   :load-path
-;;   :config
-;;   (require 'eaf)
-;;   (require 'eaf-browser))
+(use-package eaf
+  :ensure (:host github
+		 :repo "emacs-eaf/emacs-application-framework"))
 		   
-;; This should be in the last of the init.el file.
-
 (use-package envrc
   :ensure t
   :hook
