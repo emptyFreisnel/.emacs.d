@@ -37,6 +37,7 @@
 (setq native-comp-jit-compilation t)
 
 (setq gc-cons-threshold 134217728) ;; 128MB
+
 (setq read-process-output-max (* 1024 1024))
 (setq lsp-log-io nil)
 (setenv "LSP_USE_PLISTS" "true")

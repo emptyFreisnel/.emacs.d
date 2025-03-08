@@ -1,6 +1,7 @@
 ;;; package --- init.el -*- lexical-binding: t -*-
 
 ;;; Commentary:
+;;  Isabel's (emptyFreisnel) personal Emacs config...
 
 ;; ============================================================================
 
@@ -65,6 +66,33 @@
 ;; TODO: reminder to have ensure t be popped up upon completion of config.
 
 ;; ============================================================================
+;;  Auto garbage collection when emacs loses focus and using the minibuffer.
+;;  See: https://github.com/MatthewZMD/.emacs.d/blob/master/init.el
+;; ============================================================================
+
+(defvar init-gc-cons-threshold 134217728 ;; 128MB
+  "Default value to use for `gc-cons-threshold'.
+If you experience freezing, decrease this.
+If you experience stuttering, increase this.")
+
+(add-hook 'emacs-startup-hook
+	  (lambda ()
+	    (if (boundp 'after-focus-change-function)
+		(add-function :after after-focus-change-function
+			      (lambda ()
+				(unless (frame-focus-state)
+				  (garbage-collect))))
+	      (add-hook 'after-focus-change-function 'garbage-collect))
+	    (defun gc-minibuffer-setup-hook ()
+	      (setq gc-cons-threshold (* init-gc-cons-threshold 2)))
+	    (defun gc-minibuffer-exit-hook ()
+	      (garbage-collect)
+	      (setq gc-cons-threshold init-gc-cons-threshold))
+	    
+	    (add-hook 'minibuffer-setup-hook #'gc-minibuffer-setup-hook)
+	    (add-hook 'minibuffer-exit-hook #'gc-minibuffer-exit-hook)))
+
+;; ============================================================================
 ;;  Compile-angel to make sure packages are natively compiled.
 ;; ============================================================================
 
@@ -75,6 +103,7 @@
   (setq compile-angel-verbose t) ;; set to nil to silence compile-angel.
   (push "init.el" compile-angel-excluded-files)
   (push "early-init.el" compile-angel-excluded-files)
+  (push "elisp-ts-mode.el" compile-angel-excluded-files)
   (compile-angel-on-load-mode)
   (add-hook 'emacs-lisp-mode-hook #'compile-angel-on-save-local-mode))
 
@@ -179,7 +208,9 @@
 				:foreground "cyan")))
 
 ;; ============================================================================
-;;  Preferred behaviour and custom functions.
+;;  Some personalisations that make me happy...
+;;  Setting up Angelique! folder for my own custom
+;;  functions and perhaps my own little packages.
 ;; ============================================================================
 
 (setq custom-file null-device) ;; not using customize feature.
@@ -221,8 +252,8 @@
   "i" #'previous-line
   "o" #'forward-char
   "C-o" #'forward-char
-  "l" #'recenter-top-bottom
-  "u" #'undo
+  "C-l" #'recenter-top-bottom
+  "C-u" #'undo
   "C-a" #'move-beginning-of-line
   "C-e" #'move-end-of-line
   "M-a" #'backward-sentence
@@ -231,7 +262,7 @@
   "M-n" #'left-word
   "M-s" #'backward-sexp
   "M-t" #'forward-sexp
-  "M-d" #'sp-slurp-hybrid-sexp
+  "M-d" #'sp-forward-slurp-sexp
   "M-c" #'sp-backward-barf-sexp)
 
 (defun Angelique!--normal-cursor ()
@@ -356,7 +387,7 @@
 (use-package avy
   :ensure t
   :config
-  (setq avy-timeout-seconds 0.25)
+  (setq avy-timeout-seconds 0.4)
   :bind ("M-r" . avy-goto-char-timer))
 
 (use-package symbol-overlay
@@ -541,10 +572,8 @@
 
 (use-package yasnippet
   :ensure t
-  :config
-  (with-eval-after-load 'yasnippet
-    (yas-reload-all)))
-
+  :hook ((prog-mode) . yas-minor-mode))
+  
 (use-package lsp-mode
   :ensure t)
 
@@ -556,79 +585,80 @@
 ;;  Do take a look at treesit-auto for some ideas.
 ;; ============================================================================
 
+;; This is my own self-defined mode for elisp with tree-sitter.
+;; just for my own personal use...most certainly not production ready.
+
+;; (use-package elisp-ts-mode
+;;   :ensure ())
+
 (defun Angelique!--treesit (language-specs)
   
-  "Batch configure Tree-sitter for multiple LANGUAGE-SPECS.
+  "Batch configure Tree-sitter for multiple `LANGUAGE-SPECS'.
+This function will (hopefully) fallback to the original mode if there
+is no ts-mode.  Each spec(s) is a list corresponding to the arguments
+stated in the cons cells of `treesit-language-source-alist':
 
-This function will (hopefully) fallback to the
-original mode if there is no ts-mode.
+`(LANG (URL &OPTIONAL[REVISION SOURCE-DIR CC C++ COMMIT])
+ EXT ORIG-MODE &OPTIONAL TS-MODE-NAME)'.
 
-Each spec(s) is a list corresponding to the arguments stated in the
-cons cells of treesit-language-source-alist:
+- `LANG': The specified programming language to install
+          the tree-sitter grammars.
+- `URL' : The source of the tree-sitter grammars.
+  &OPTIONAL:
+  -  `REVISION'  : Git tag or branch of the desired version.
+                   Defaults to the latest default branch.
+  -  `SOURCE-DIR': The tree-sitter parser (usually in `src').
+                   Defaults to `src'.
+  -  `CC'and`C++': Compilers for C and C++.
+                   Defaults to \"cc\" and \"c++\" respectively.
+  -  `COMMIT'    : If non-nil, checks out the commit hash
+                   while cloning the repo.
 
-`(LANG (URL &OPTIONAL[REVISION SOURCE-DIR CC C++ COMMIT]) EXT ORIG-MODE)'.
-
-- `LANG': The specified programming language to install the treesitter grammars.
-
-- `URL': The source of the treesitter grammars:
-  &OPTIONAL
-    `REVISION'  : Git tag or branch of the desired version.
-                  Defaults to the latest default branch.
-    `SOURCE-DIR': The treesitter parser (usually in `src').  Defaults to `src'.
-    `CC'and`C++': Compilers for C and C++.
-                  Defaults to \"cc\" and \"c++\" respectively.
-    `COMMIT'    : If non-nil, checks out the commit hash while cloning the repo.
-
-For auto-mode-alist and major-mode-remap-alist,
+For `auto-mode-alist' and `major-mode-remap-alist',
 this function takes the following as arguments.
 
-- `EXT': The file-extension of that particular programming
-         language that treesitter will be parsing.
-- `ORIG-MODE': The original major-mode that treesitter will replace."
-  
+- `EXT'      : The file-extension of that particular programming
+               language that tree-sitter will be parsing.
+- `ORIG-MODE': The original major-mode that tree-sitter will replace.
+  &OPTIONAL:
+  - `TS-MODE-NAME': This is for edge cases where the string does not
+                    translate well to the particular tree-sitter `-ts-mode'
+                    when passing through `lang', for example see `cpp' and `C++'."
+ 
   (require 'treesit)
   (dolist (spec language-specs)
     (cl-destructuring-bind (lang (url &optional rev src cc c++ commit)
-				 ext orig-mode) spec
+				 ext orig-mode &optional ts-mode-name) spec
       (add-to-list 'treesit-language-source-alist
 		   `(,lang . (,url ,@(if rev (list rev) nil) ,@(if src (list src) nil)
 				   ,@(if cc (list cc) nil) ,@(if c++ (list c++) nil)
 				   ,@(if commit (list commit) nil))))
-      (unless (treesit-ready-p lang)
-	(message "Installing %s Tree-sitter grammar..." lang)
-	(treesit-install-language-grammar lang))
+      (unless (treesit-ready-p lang) (treesit-install-language-grammar lang))
       (when (treesit-ready-p lang)
-	(let ((ts-mode (intern (format "%s-ts-mode" lang))))
+	(let ((ts-mode (or ts-mode-name (intern (format "%s-ts-mode" lang)))))
 	  (add-to-list 'auto-mode-alist
 		       `(,ext . (lambda () (if (fboundp ',ts-mode) (,ts-mode) (,orig-mode)))))
 	  (when (fboundp ts-mode)
-	    (add-to-list 'major-mode-remap-alist `(,orig-mode . ,ts-mode))))))))
+			  (add-to-list 'major-mode-remap-alist `(,orig-mode . ,ts-mode))))))))
 
 (Angelique!--treesit
  '((python
-    ("https://github.com/tree-sitter/tree-sitter-python") "\\.py\\'"
+    ("https://github.com/tree-sitter/tree-sitter-python")
+    "\\.py\\'"
     python-mode)
    (elisp
-    ("https://github.com/Wilfred/tree-sitter-elisp") "\\.el\\'"
+    ("https://github.com/Wilfred/tree-sitter-elisp")
+    "\\.el\\'"
     emacs-lisp-mode)
    (c
-    ("https://github.com/tree-sitter/tree-sitter-c") "\\.c\\'"
-    c-mode)))
-
-;; (setq treesit-language-source-alist
-;;       '((elisp . ("https://github.com/Wilfred/tree-sitter-elisp"))
-;; 	(python . ("https://github.com/tree-sitter/tree-sitter-python"))))
-
-;; (dolist (source treesit-language-source-alist)
-;;   (unless (treesit-ready-p (car source))
-;;     (treesit-install-language-grammar (car source))))
-
-;; (add-to-list 'auto-mode-alist '("\\.py\\'" . python-mode))
-;; (add-to-list 'major-mode-remap-alist '(python-mode . python-ts-mode))
-
-;; (add-to-list 'auto-mode-alist '("\\.el\\'" . elisp-ts-mode))
-;; (add-to-list 'major-mode-remap-alist '(emacs-lisp-mode . elisp-ts-mode))
-
+    ("https://github.com/tree-sitter/tree-sitter-c")
+    "\\.c\\'"
+    c-mode)
+   (cpp
+    ("https://github.com/tree-sitter/tree-sitter-cpp")
+    "\\.\\(cpp\\|hpp\\)\\'"
+    c++-mode
+    c++-ts-mode)))
 
 ;; ============================================================================
 ;;  Configure Dired / dirvish and turning on server mode.
@@ -676,7 +706,8 @@ this function takes the following as arguments.
 ;; ============================================================================
 
 ;; (defun EAF-source-and-install ()
-;;   "Git clone emacs-application-framework if not currently available."
+;;   "Git clone emacs-application-framework if not currently available.
+;;    This process is run asynchonously (hopefully...)"
 ;;   (let* ((emacs-eaf-dir (expand-file-name
 ;; 			 "emacs-application-framework/" user-emacs-directory))
 ;; 	 (install-script (expand-file-name "./install-eaf.py" emacs-eaf-dir))
@@ -694,6 +725,8 @@ this function takes the following as arguments.
 ;;       (async-shell-command (format "chmod +x ./install-eaf.py"))
 ;;       (message "Install script is now executable!")
 ;;       (async-shell-command (format "./install-eaf.py")))))
+
+;; (add-hook 'elpaca-after-init-hook #'EAF-source-and-install)
 
 ;; (use-package eaf
 ;;   :ensure nil
