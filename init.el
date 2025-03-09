@@ -730,15 +730,16 @@ This will sync the contents from the repo into the builds folder."
 (use-package eaf
   :ensure (:host github
 		 :repo "emacs-eaf/emacs-application-framework")
-  :custom
-  (eaf-browser-continue-where-left-off t)
-  (eaf-browser-enable-adblocker t)
+  :demand (eaf-search-it)
+  :hook
+  (elpaca-after-init . eaf-sync-build-dir-from-repo)
   :config
   (require 'eaf)
   (require 'eaf-browser)
   (require 'eaf-image-viewer)
-  :hook
-  (elpaca-after-init . eaf-sync-build-dir-from-repo))
+  (setq eaf-browser-enable-adblocker t)
+  (setq eaf-browser-remember-history nil)
+  (setq eaf-browser-dark-mode nil))
 
 ;; ============================================================================
 ;;  Envrc which is evaluated last in this file.
