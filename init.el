@@ -658,7 +658,7 @@ this function takes the following as arguments.
     c++-ts-mode)))
 
 ;; ============================================================================
-;;  Configure Dired / dirvish and turning on server mode.
+;;  Configure Dired / dirvish.
 ;; ============================================================================
 
 (use-package dirvish
