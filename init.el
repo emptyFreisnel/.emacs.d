@@ -698,13 +698,51 @@ this function takes the following as arguments.
 ;; (use-package org
 ;;  :ensure nil)
 
+;; (use-package org-superstar)
+
 ;; ============================================================================
-;;  Emacs application framework for integrated browser.
+;;  Emacs application framework (eaf) for integrated browser
+;;  and better image-viewer. Note that eaf needs sexpdata==1.0.0 and epc as
+;;  dependencies. No choice but to use flag --break-system-packages i guess...
 ;; ============================================================================
+
+(defvar eaf-build-dir (expand-file-name
+		       "elpaca/builds/eaf/" user-emacs-directory))
+(defvar eaf-repo-dir (expand-file-name
+		      "elpaca/repos/emacs-application-framework/*" user-emacs-directory))
+(defvar eaf-json-file (expand-file-name
+		       "applications.json" eaf-build-dir))
+
+(defun eaf-sync-build-dir-from-repo ()
+  "Elpaca only builds .el files and link them to the Elpaca builds folder.
+As EAF needs Python and its applications.json file to work....
+This will sync the contents from the repo into the builds folder."
+  (interactive)
+  (unless (file-exists-p eaf-json-file)
+    (start-process-shell-command "eaf-delete"
+				 "*Messages*"
+				 (format "rm -rf %s/eaf.el" eaf-build-dir))
+    (start-process-shell-command "eaf-sync"
+				 "*Messages*"
+				 (format "cp -rf %s %s" eaf-repo-dir eaf-build-dir)))
+  (message "eaf-sync is successful!"))
 
 (use-package eaf
   :ensure (:host github
-		 :repo "emacs-eaf/emacs-application-framework"))
+		 :repo "emacs-eaf/emacs-application-framework")
+  :custom
+  (eaf-browser-continue-where-left-off t)
+  (eaf-browser-enable-adblocker t)
+  :config
+  (require 'eaf)
+  (require 'eaf-browser)
+  (require 'eaf-image-viewer)
+  :hook
+  (elpaca-after-init . eaf-sync-build-dir-from-repo))
+
+;; ============================================================================
+;;  Envrc which is evaluated last in this file.
+;; ============================================================================
 		   
 (use-package envrc
   :ensure t
