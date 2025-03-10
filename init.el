@@ -503,16 +503,15 @@ The DWIM behaviour of this command is as follows:
   :hook (elpaca-after-init . savehist-mode))
 
 ;; ============================================================================
-;;   LSP completions go here...
+;;  LSP completions go here...
+;;  This is also supplemented by lsp-booster.
 ;; ============================================================================
 
 (use-package corfu
   :ensure t
   :hook (elpaca-after-init . global-corfu-mode)
   :bind (:map corfu-map
-	      ("<tab>" . corfu-complete)
-	      ("M-n" . nil)   ;; using Angelique! as corfu-next.
-	      ("M-p" . nil))  ;; using Angelique! as corfu-previous.
+	      ("<tab>" . corfu-complete))
   :config
   (set-face-attribute 'corfu-current nil
 		      :background "#120333"
@@ -531,20 +530,20 @@ The DWIM behaviour of this command is as follows:
     (corfu-history-mode 1)
     (add-to-list 'savehist-additional-variables 'corfu-history)))
 
-(use-package completion-preview
-  :ensure nil
-  :bind
-  (:map completion-preview-active-mode-map
-	("TAB" . nil)
-	("C-<tab>" . completion-preview-insert))
-  :hook ((prog-mode) . completion-preview-mode))
-
 (use-package flymake
   :ensure nil
   :hook ((prog-mode) . flymake-mode))
 
 (use-package yasnippet
   :ensure t
+  :bind (:map yas-minor-mode-map
+	      ("TAB" . nil)
+	      ("M-n" . yas-expand))
+  :config
+  (yas-reload-all)
+  (setq yas-snippet-dirs
+	'("~/ .emacs.d/snippets"
+	  "~/.emacs.d/elpaca/builds/yasnippet-snippets/snippets"))
   :hook ((prog-mode) . yas-minor-mode))
 
 (use-package yasnippet-snippets
@@ -553,16 +552,34 @@ The DWIM behaviour of this command is as follows:
   
 (use-package lsp-mode
   :ensure t
+  :bind-keymap
+  ("C-c l" . lsp-command-map)
   :custom
-  (lsp-completion-provider :none)
+  (lsp-completion-provider :none) ;; using corfu!
+  :init
+  (defun orderless-dispatch-flex-first (_pattern index _total)
+    (and (eq index 0) 'orderless-flex))
+  (defun lsp-mode-setup-completion ()
+    (setf (alist-get 'styles (alist-get 'lsp-capf completion-category-defaults))
+	  '(orderless))
+    ;; Optionally configure the first word as flex filtered.
+    (add-hook 'orderless-style-dispatchers #'orderless-dispatch-flex-first)
+    ;; Optionally configure the cape-capf-buster.
+    (setq-local completion-at-point-functions
+		(list (cape-capf-buster #'lsp-completion-at-point))))
   :hook
-  (lsp-mode . lsp-enable-which-key-integration))
+  (lsp-completion-mode . lsp-mode-setup-completion)
+  (lsp-mode . lsp-enable-which-key-integration)
+  ((python-mode
+    python-ts-mode) . lsp-deferred))
 
 (use-package lsp-ui
-  :ensure t)
+  :ensure t
+  :after lsp-mode)
 
 (use-package lsp-pyright
   :ensure t
+  :after lsp-mode
   :custom
   (lsp-pyright-multi-root nil)
   (lsp-pyright-langserver-command "basedpyright")
@@ -584,6 +601,14 @@ The DWIM behaviour of this command is as follows:
   (add-hook 'completion-at-point-functions #'cape-file)
   (add-hook 'completion-at-point-functions #'cape-elisp-block)
   (add-hook 'completion-at-point-functions #'cape-dict))
+
+(use-package completion-preview
+  :ensure nil
+  :bind
+  (:map completion-preview-active-mode-map
+	("TAB" . nil)
+	("C-<tab>" . completion-preview-insert))
+  :hook ((prog-mode) . completion-preview-mode))
 
 ;; ============================================================================
 ;;  Treesitter...
