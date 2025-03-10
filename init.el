@@ -418,12 +418,10 @@ The DWIM behaviour of this command is as follows:
 		  :repo "armindarvish/consult-omni"
 		  :branch "main"
 		  :files (:defaults "sources/*.el"))
-  :after (consult browser-hist)
   :bind ("M-s M-s" . consult-omni)
   :config
-  (add-to-list 'load-path
-	       "~/freisnel/.emacs.d/elpaca/builds/repo/consult-omni/sources")
   (require 'consult-omni-sources)
+  (require 'consult-omni-embark)
   (consult-omni-sources-load-modules))
 
 (use-package embark
@@ -431,7 +429,10 @@ The DWIM behaviour of this command is as follows:
   :bind (("C-;" . embark-act)
 	 :map minibuffer-local-map
 	 ("C-c C-c" . embark-collect)
-	 ("C-c C-e" . embark-export)))
+	 ("C-c C-e" . embark-export))
+  :config
+  (set-face-attribute 'embark-target nil
+		      :background "#4B0082"))
 
 (use-package smartparens
   :ensure t
@@ -481,6 +482,9 @@ The DWIM behaviour of this command is as follows:
   :ensure nil
   :hook
   (elpaca-after-init . winner-mode))
+
+;; (use-package pdf-tools)
+
 
 ;; ============================================================================
 ;;  Configure the minibuffer and LSP completions.
@@ -565,7 +569,7 @@ The DWIM behaviour of this command is as follows:
 
 (use-package flymake
   :ensure nil
-  :hook ((prog-mode emacs-lisp-mode) . flymake-mode))
+  :hook ((prog-mode) . flymake-mode))
 
 (use-package yasnippet
   :ensure t
@@ -737,6 +741,8 @@ This will sync the contents from the repo into the builds folder."
   (require 'eaf)
   (require 'eaf-browser)
   (require 'eaf-image-viewer)
+  (setq eaf-byte-compile-apps t)
+  (setq eaf-browser-default-search-engine "duckduckgo")
   (setq eaf-browser-enable-adblocker t)
   (setq eaf-browser-remember-history nil)
   (setq eaf-browser-dark-mode nil))
