@@ -230,9 +230,8 @@ If you experience stuttering, increase this.")
 ;;  Prevent the cursor from going into the minibuffer prompt.
 ;; ============================================================================
 
-(customize-set-variable
- 'minibuffer-prompt-properties
- (quote (read-only t cursor-intangible t face minibuffer-prompt)))
+(setq minibuffer-prompt-properties
+ '(read-only t cursor-intangible t face minibuffer-prompt))
 
 ;; ============================================================================
 ;;  Home row keybindings...
@@ -360,6 +359,7 @@ The DWIM behaviour of this command is as follows:
 ;; See karthik's post on how to use avy.
 (use-package avy
   :ensure t
+  :commands (avy-goto-char-timer)
   :config
   (setq avy-timeout-seconds 0.4)
   :bind ("M-r" . avy-goto-char-timer))
@@ -460,11 +460,14 @@ The DWIM behaviour of this command is as follows:
   :hook
   (elpaca-after-init . winner-mode))
 
+(use-package exec-path-from-shell
+  :ensure t)
+
 ;; (use-package pdf-tools)
 
 
 ;; ============================================================================
-;;  Configure the minibuffer and LSP completions.
+;;  Configuring the minibuffer...
 ;; ============================================================================
 
 (use-package marginalia
@@ -499,6 +502,10 @@ The DWIM behaviour of this command is as follows:
   :ensure nil
   :hook (elpaca-after-init . savehist-mode))
 
+;; ============================================================================
+;;   LSP completions go here...
+;; ============================================================================
+
 (use-package corfu
   :ensure t
   :hook (elpaca-after-init . global-corfu-mode)
@@ -532,6 +539,40 @@ The DWIM behaviour of this command is as follows:
 	("C-<tab>" . completion-preview-insert))
   :hook ((prog-mode) . completion-preview-mode))
 
+(use-package flymake
+  :ensure nil
+  :hook ((prog-mode) . flymake-mode))
+
+(use-package yasnippet
+  :ensure t
+  :hook ((prog-mode) . yas-minor-mode))
+
+(use-package yasnippet-snippets
+  :ensure t
+  :after yasnippet)
+  
+(use-package lsp-mode
+  :ensure t
+  :custom
+  (lsp-completion-provider :none)
+  :hook
+  (lsp-mode . lsp-enable-which-key-integration))
+
+(use-package lsp-ui
+  :ensure t)
+
+(use-package lsp-pyright
+  :ensure t
+  :custom
+  (lsp-pyright-multi-root nil)
+  (lsp-pyright-langserver-command "basedpyright")
+  :hook
+  ((python-mode python-ts-mode). (lambda ()
+				   (require 'lsp-pyright))))
+
+(use-package company ;; we are using cape instead as frontend.
+  :ensure t)
+
 (use-package cape
   :ensure t
   :commands (cape-dabbrev cape-file cape-elisp-block)
@@ -543,20 +584,6 @@ The DWIM behaviour of this command is as follows:
   (add-hook 'completion-at-point-functions #'cape-file)
   (add-hook 'completion-at-point-functions #'cape-elisp-block)
   (add-hook 'completion-at-point-functions #'cape-dict))
-
-(use-package flymake
-  :ensure nil
-  :hook ((prog-mode) . flymake-mode))
-
-(use-package yasnippet
-  :ensure t
-  :hook ((prog-mode) . yas-minor-mode))
-  
-(use-package lsp-mode
-  :ensure t)
-
-(use-package company ;; we are using cape instead as frontend.
-  :ensure t)
 
 ;; ============================================================================
 ;;  Treesitter...
@@ -636,7 +663,11 @@ this function takes the following as arguments.
     ("https://github.com/tree-sitter/tree-sitter-cpp")
     "\\.\\(cpp\\|hpp\\)\\'"
     c++-mode
-    c++-ts-mode)))
+    c++-ts-mode)
+   (rust
+    ("https://github.com/tree-sitter/tree-sitter-rust")
+    "\\.rs\\'"
+    rust-mode)))
 
 ;; ============================================================================
 ;;  Configure Dired / dirvish.
@@ -712,6 +743,8 @@ This will sync the contents from the repo into the builds folder."
   :ensure (:host github
 		 :repo "emacs-eaf/emacs-application-framework")
   :demand (eaf-search-it)
+  :bind
+  ("M-s M-e" . eaf-search-it)
   :hook
   (elpaca-after-init . eaf-sync-build-dir-from-repo)
   :config
