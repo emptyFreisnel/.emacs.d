@@ -284,21 +284,7 @@ If you experience stuttering, increase this.")
 		     #'Angelique!--normal-cursor))
 
 (define-key global-map (kbd "C-x m") nil)
-(define-key global-map (kbd "M-n") #'Angelique!--keybindings)
-(define-key minibuffer-mode-map (kbd "M-n") nil)
-(define-key minibuffer-mode-map (kbd "M-f") 'next-history-element)
-
-(add-hook 'Info-mode-hook
-	  (lambda ()
-	    (define-key Info-mode-map (kbd "M-n") nil)))
-
-(add-hook 'comint-mode-hook
-	  (lambda ()
-	    (define-key comint-mode-map (kbd "M-n") nil)))
-
-(add-hook 'shell-command-mode-hook
-	  (lambda ()
-	    (define-key shell-command-mode-map (kbd "M-n") nil)))
+(define-key global-map (kbd "C-c n") #'Angelique!--keybindings)
 
 ;; ============================================================================
 ;;  Better keyboard quit.
@@ -356,16 +342,7 @@ The DWIM behaviour of this command is as follows:
 (use-package magit
   :ensure t
   :commands magit
-  :after transient
-  :bind (:map magit-mode-map
-	      ("M-n" . nil)
-	      ("M-f" . magit-section-forward-sibling)
-	      :map magit-log-mode-map
-	      ("M-n" . nil)
-	      ("M-f" . magit-section-forward-sibling)
-	      :map git-commit-mode-map
-	      ("M-n" . nil)
-	      ("M-f" . git-commit-next-message)))
+  :after transient)
 
 (use-package forge
   :ensure t
