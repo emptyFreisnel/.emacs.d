@@ -164,9 +164,6 @@ If you experience stuttering, increase this.")
   :ensure t
   :hook ((prog-mode) . colorful-mode))
 
-;; TODO: fix with better fonts for Org Mode and the like.
-(set-frame-font "Fira Code Nerd Font 11" nil t)
-
 ;; ============================================================================
 ;;  Transparency...
 ;; ============================================================================
@@ -185,6 +182,11 @@ If you experience stuttering, increase this.")
 ;;  an overlay so it has higher priority over text properties. so setting
 ;;  something to foreground overrides font-lock syntax highlighting...
 ;; ============================================================================
+
+;; using daemon-mode...use default-frame-alist instead of
+;; set-frame-font.
+
+(add-to-list 'default-frame-alist '(font . "Fira Code Nerd Font 11"))
 
 (add-hook 'elpaca-after-init-hook
 	  (lambda ()
@@ -335,6 +337,9 @@ The DWIM behaviour of this command is as follows:
 ;;  Utilities.
 ;; ============================================================================
 
+(use-package hydra
+  :ensure t)
+
 (use-package transient
   :ensure t)
 
@@ -465,7 +470,6 @@ The DWIM behaviour of this command is as follows:
 
 ;; (use-package pdf-tools)
 
-
 ;; ============================================================================
 ;;  Configuring the minibuffer...
 ;; ============================================================================
@@ -511,7 +515,8 @@ The DWIM behaviour of this command is as follows:
   :ensure t
   :hook (elpaca-after-init . global-corfu-mode)
   :bind (:map corfu-map
-	      ("<tab>" . corfu-complete))
+	      ("<tab>" . corfu-complete)
+	      ("TAB" . corfu-complete))
   :config
   (set-face-attribute 'corfu-current nil
 		      :background "#120333"
@@ -537,25 +542,62 @@ The DWIM behaviour of this command is as follows:
 (use-package yasnippet
   :ensure t
   :bind (:map yas-minor-mode-map
-	      ("TAB" . nil)
-	      ("M-n" . yas-expand))
+	      ("TAB" . nil))
   :config
-  (yas-reload-all)
   (setq yas-snippet-dirs
 	'("~/ .emacs.d/snippets"
 	  "~/.emacs.d/elpaca/builds/yasnippet-snippets/snippets"))
-  :hook ((prog-mode) . yas-minor-mode))
+  :hook (elpaca-after-init . yas-global-mode))
 
 (use-package yasnippet-snippets
+  :ensure t)
+
+(use-package yasnippet-capf
   :ensure t
-  :after yasnippet)
+  :demand t
+  :bind ("M-n" . yasnippet-capf)
+  :after cape
+  :init
+  (defun Angelique!--yasnippet-capf ()
+    (add-to-list 'completion-at-point-functions #'yasnippet-capf))
+  :hook
+  ((emacs-lisp-mode
+    python-ts-mode
+    c-ts-mode
+    c++-ts-mode) . Angelique!--yasnippet-capf))
+
+(defun Angelique!--elisp-capf ()
   
+  "Unifies `yasnippet-capf' with `elisp-completion-at-point' for elisp editing.
+This is done using `cape-capf-super'."
+  
+  (setq-local completion-at-point-functions
+	      (list (cape-capf-super
+		     #'elisp-completion-at-point
+		     #'yasnippet-capf
+		     #'cape-dabbrev))))
+
+(add-hook 'emacs-lisp-mode-hook #'Angelique!--elisp-capf)
+
+(use-package cape
+  :ensure t
+  :commands (cape-dabbrev cape-file cape-elisp-block)
+  :bind ("C-c p" . cape-prefix-map)
+  :init
+  ;; Add to the global default value of `completion-at-point-functions'
+  ;; which is used by `completion-at-point'
+  (add-hook 'completion-at-point-functions #'cape-dabbrev)
+  (add-hook 'completion-at-point-functions #'cape-file)
+  (add-hook 'completion-at-point-functions #'cape-elisp-block))
+
 (use-package lsp-mode
   :ensure t
+  :commands (lsp lsp-deferred)
   :bind-keymap
   ("C-c l" . lsp-command-map)
   :custom
   (lsp-completion-provider :none) ;; using corfu!
+  (lsp-idle-delay 0.3)
   :init
   (defun orderless-dispatch-flex-first (_pattern index _total)
     (and (eq index 0) 'orderless-flex))
@@ -566,12 +608,17 @@ The DWIM behaviour of this command is as follows:
     (add-hook 'orderless-style-dispatchers #'orderless-dispatch-flex-first)
     ;; Optionally configure the cape-capf-buster.
     (setq-local completion-at-point-functions
-		(list (cape-capf-buster #'lsp-completion-at-point))))
+		(list (cape-capf-buster #'lsp-completion-at-point)))
+    (setq-local completion-at-point-functions
+		(list (cape-capf-super
+		       #'lsp-completion-at-point #'yasnippet-capf #'cape-dabbrev))))
   :hook
   (lsp-completion-mode . lsp-mode-setup-completion)
   (lsp-mode . lsp-enable-which-key-integration)
-  ((python-mode
-    python-ts-mode) . lsp-deferred))
+  ((python-ts-mode
+    c-ts-mode
+    c++-ts-mode
+    rust-ts-mode) . lsp-deferred))
 
 (use-package lsp-ui
   :ensure t
@@ -584,23 +631,17 @@ The DWIM behaviour of this command is as follows:
   (lsp-pyright-multi-root nil)
   (lsp-pyright-langserver-command "basedpyright")
   :hook
-  ((python-mode python-ts-mode). (lambda ()
-				   (require 'lsp-pyright))))
+  ((python-ts-mode). (lambda ()
+		       (require 'lsp-pyright))))
 
-(use-package company ;; we are using cape instead as frontend.
+(use-package treemacs
   :ensure t)
 
-(use-package cape
-  :ensure t
-  :commands (cape-dabbrev cape-file cape-elisp-block)
-  :bind ("C-c p" . cape-prefix-map)
-  :init
-  ;; Add to the global default value of `completion-at-point-functions'
-  ;; which is used by `completion-at-point'
-  (add-hook 'completion-at-point-functions #'cape-dabbrev)
-  (add-hook 'completion-at-point-functions #'cape-file)
-  (add-hook 'completion-at-point-functions #'cape-elisp-block)
-  (add-hook 'completion-at-point-functions #'cape-dict))
+(use-package lsp-treemacs
+  :ensure t)
+
+(use-package dap-mode
+  :ensure t)
 
 (use-package completion-preview
   :ensure nil
@@ -776,11 +817,12 @@ This will sync the contents from the repo into the builds folder."
   (require 'eaf)
   (require 'eaf-browser)
   (require 'eaf-image-viewer)
-  (setq eaf-byte-compile-apps t)
-  (setq eaf-browser-default-search-engine "duckduckgo")
-  (setq eaf-browser-enable-adblocker t)
-  (setq eaf-browser-remember-history nil)
-  (setq eaf-browser-dark-mode nil))
+  :custom
+  (eaf-byte-compile-apps t)
+  (eaf-browser-default-search-engine "duckduckgo")
+  (eaf-browser-enable-adblocker t)
+  (eaf-browser-remember-history nil)
+  (eaf-browser-dark-mode nil))
 
 ;; ============================================================================
 ;;  Envrc which is evaluated last in this file.
@@ -789,7 +831,9 @@ This will sync the contents from the repo into the builds folder."
 (use-package envrc
   :ensure t
   :hook
-  (elpaca-after-init . envrc-global-mode))
+  (elpaca-after-init . (lambda ()
+			 (when (executable-find "direnv")
+			   (envrc-global-mode 1)))))
 
 (provide 'init)
 

@@ -46,10 +46,13 @@
 ;;  Basic augumenations
 ;; ============================================================================
 
-(menu-bar-mode -1)
-(scroll-bar-mode -1)
-(tool-bar-mode -1)
-
+(dolist (mode '(menu-bar-mode scroll-bar-mode tool-bar-mode))
+  (funcall mode -1)
+  (when (daemonp)
+    (add-hook 'after-make-frame-functions (lambda (frame)
+					    (select-frame frame)
+					    (funcall mode -1)))))
+     
 (column-number-mode t)
 
 (size-indication-mode t)
