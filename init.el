@@ -1,7 +1,7 @@
 ;;; package --- init.el -*- lexical-binding: t -*-
 
 ;;; Commentary:
-;;  Isabel's (emptyFreisnel) personal Emacs config...
+;;  emptyFreisnel's [isabelrenata] personal Emacs config...
 
 ;; ============================================================================
 
@@ -149,7 +149,8 @@ If you experience stuttering, increase this.")
 
 (use-package doom-modeline
   :ensure t
-  :hook (elpaca-after-init . doom-modeline-mode))
+  :hook
+  (elpaca-after-init . doom-modeline-mode))
 
 (use-package indent-bars
   :ensure t
@@ -187,30 +188,36 @@ If you experience stuttering, increase this.")
 ;; set-frame-font.
 
 (add-to-list 'default-frame-alist '(font . "Fira Code Nerd Font 11"))
+(add-to-list 'default-frame-alist '(width . 120))
+(add-to-list 'default-frame-alist '(height . 45))
+(add-to-list 'default-frame-alist '(cursor-color ."cyan"))
 
-(add-hook 'elpaca-after-init-hook
-	  (lambda ()
-	    (set-face-attribute 'region nil
-				:background "#4B0082") ;; indigo
-	    
-	    (set-face-attribute 'highlight nil
-				:background "#EEAEEE")
+(defun Angelique!--current-frame-customisations (&optional frame)
+  
+  "For various aesthetic customisations to be loaded in FRAME.
+This will hopefully make sure that emacsclient also
+inherit the customisations properly."
+  
+  (with-selected-frame (or frame (selected-frame))
+    (set-face-attribute 'region nil
+			:background "#4B0082") ;; indigo
+    
+    (set-face-attribute 'highlight nil
+			:background "#EEAEEE")
 
-	    (set-face-attribute 'lazy-highlight nil
-				:background "#EEAEEE")
+    (set-face-attribute 'lazy-highlight nil
+			:background "#EEAEEE")
 
-	    (set-face-attribute 'isearch nil
-				:background "#EEAEEE")
+    (set-face-attribute 'isearch nil
+			:background "#EEAEEE")
 
-	    (set-default 'cursor-type 'box)
-	    (set-face-attribute 'cursor nil
-				:background "cyan")
+    (set-face-attribute 'hl-line nil
+			:background "#120333")
 
-	    (set-face-attribute 'hl-line nil
-				:background "#120333")
+    (set-face-attribute 'line-number-current-line nil
+			:foreground "cyan")))
 
-	    (set-face-attribute 'line-number-current-line nil
-				:foreground "cyan")))
+(add-hook 'elpaca-after-init-hook #'Angelique!--current-frame-customisations)
 
 ;; ============================================================================
 ;;  Some personalisations that make me happy...
@@ -309,17 +316,29 @@ The DWIM behaviour of this command is as follows:
 - In every other case use the regular `keyboard-quit'."
   
   (interactive)
-  (cond
-   ((region-active-p)
-    (keyboard-quit))
-   ((derived-mode-p 'completion-list-mode)
-    (delete-completion-window))
-   ((> (minibuffer-depth) 0)
-    (abort-recursive-edit))
-   (t
-    (keyboard-quit))))
+  (cond ((region-active-p)
+	 (keyboard-quit))
+	((derived-mode-p 'completion-list-mode)
+	 (delete-completion-window))
+	((> (minibuffer-depth) 0)
+	 (abort-recursive-edit))
+	(t
+	 (keyboard-quit))))
 
 (define-key global-map (kbd "C-g") #'Angelique!--keyboard-quit-dwim)
+
+;; ============================================================================
+;;  Better kill-buffer.
+;; ============================================================================
+
+(defun Angelique!--kill-buffer-dwim ()
+  "Do-what-I-mean behaviour for a general `kill-buffer'.
+The general `kill-buffer' does not actually remove the buffer
+present in the screen."
+  (interactive)
+  (cond (())))
+
+;; (define-key global-map (kbd "C-x k") #'Angelique!--kill-buffer-dwim)
 
 (use-package delsel
   :ensure nil
@@ -456,7 +475,6 @@ The DWIM behaviour of this command is as follows:
 (use-package which-key
   :ensure nil
   :commands which-key-mode
-  :diminish
   :hook
   (elpaca-after-init . which-key-mode))
 
@@ -468,7 +486,22 @@ The DWIM behaviour of this command is as follows:
 (use-package exec-path-from-shell
   :ensure t)
 
-;; (use-package pdf-tools)
+(use-package pdf-tools
+  :ensure t)
+
+(use-package minimap
+  ;; its nice to have the minimap sometimes even tho i usually dont use it...
+  :ensure t
+  :defer t
+  :commands minimap-mode
+  :config
+  (set-face-attribute 'minimap-current-line-face nil
+		      :background "#EEAEEE")
+  (set-face-attribute 'minimap-active-region-background nil
+		      :background "#120333")
+  :custom
+  (minimap-update-delay 0)
+  (minimap-window-location 'right))
 
 ;; ============================================================================
 ;;  Configuring the minibuffer...
@@ -558,15 +591,15 @@ The DWIM behaviour of this command is as follows:
   :bind ("M-n" . yasnippet-capf)
   :after cape
   :init
-  (defun Angelique!--yasnippet-capf ()
+  (defun yasnippet-capf-dwim ()
     (add-to-list 'completion-at-point-functions #'yasnippet-capf))
   :hook
   ((emacs-lisp-mode
     python-ts-mode
     c-ts-mode
-    c++-ts-mode) . Angelique!--yasnippet-capf))
+    c++-ts-mode) . yasnippet-capf-dwim))
 
-(defun Angelique!--elisp-capf ()
+(defun elisp-super-capf ()
   
   "Unifies `yasnippet-capf' with `elisp-completion-at-point' for elisp editing.
 This is done using `cape-capf-super'."
@@ -577,7 +610,10 @@ This is done using `cape-capf-super'."
 		     #'yasnippet-capf
 		     #'cape-dabbrev))))
 
-(add-hook 'emacs-lisp-mode-hook #'Angelique!--elisp-capf)
+(dolist (elisp-capf-hook '(emacs-lisp-mode-hook
+			   lisp-interaction-mode-hook
+			   ielm-mode-hook))
+  (add-hook elisp-capf-hook #'elisp-super-capf))
 
 (use-package cape
   :ensure t
@@ -635,13 +671,17 @@ This is done using `cape-capf-super'."
 		       (require 'lsp-pyright))))
 
 (use-package treemacs
-  :ensure t)
+  :ensure t
+  :commands treemacs)
 
 (use-package lsp-treemacs
   :ensure t)
 
 (use-package dap-mode
-  :ensure t)
+  :ensure t
+  :config
+  (require 'dap-python)
+  (setq dap-python-debugger 'debugpy))
 
 (use-package completion-preview
   :ensure nil
@@ -778,6 +818,9 @@ this function takes the following as arguments.
 
 ;; (use-package org-superstar)
 
+;; (use-package org-modern
+;;  :ensure t)
+
 ;; ============================================================================
 ;;  Emacs application framework (eaf) for integrated browser
 ;;  and better image-viewer. Note that eaf needs sexpdata==1.0.0 and epc as
@@ -802,8 +845,10 @@ This will sync the contents from the repo into the builds folder."
 				 (format "rm -rf %s/eaf.el" eaf-build-dir))
     (start-process-shell-command "eaf-sync"
 				 "*Messages*"
-				 (format "cp -rf %s %s" eaf-repo-dir eaf-build-dir)))
-  (message "eaf-sync is successful!"))
+				 (format "cp -rf %s %s" eaf-repo-dir eaf-build-dir))
+    (message "eaf-sync-build-dir-from-repo is successful!"))
+  (when (file-exists-p eaf-json-file)
+  (message "eaf-json-file found! Skipping sync...")))
 
 (use-package eaf
   :ensure (:host github
@@ -837,4 +882,4 @@ This will sync the contents from the repo into the builds folder."
 
 (provide 'init)
 
-;;; init.el ends here
+;;; init.el ends here.

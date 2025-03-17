@@ -32,6 +32,7 @@
 
 (setq frame-inhibit-implied-resize t)
 (setq frame-resize-pixelwise t)
+(setq window-resize-pixelwise t)
 
 (setq load-prefer-newer t)
 (setq native-comp-jit-compilation t)
