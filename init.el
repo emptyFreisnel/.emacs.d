@@ -63,14 +63,10 @@
 (elpaca elpaca-use-package
   (elpaca-use-package-mode))
 
-;; TODO: reminder to have ensure t be popped up upon completion of config.
-
-;; (add-hook 'save-buffers-kill-emacs-hook
-;; (lambda ()))
-
 ;; ============================================================================
 ;;  Auto garbage collection when emacs loses focus and using the minibuffer.
 ;;  See: https://github.com/MatthewZMD/.emacs.d/blob/master/init.el
+;;  may or may not work with using daemon-mode...
 ;; ============================================================================
 
 (defvar init-gc-cons-threshold 134217728 ;; 128MB
@@ -164,18 +160,6 @@ If you experience stuttering, increase this.")
 (use-package colorful-mode
   :ensure t
   :hook ((prog-mode) . colorful-mode))
-
-;; ============================================================================
-;;  Transparency...
-;; ============================================================================
-
-;; (defun Angelique!--transparency ()
-;;     "Toggle transparency."
-;;     (interactive)
-;;     (let ((alpha-transparency 75))
-;;       (pcase (frame-parameter nil 'alpha-background)
-;; 	(alpha-transparency (set-frame-parameter nil 'alpha-background 100))
-;; 	(t (set-frame-parameter nil 'alpha-background alpha-transparency)))))
 
 ;; ============================================================================
 ;;  Wish emacs can expose more properties to font attributes
@@ -328,17 +312,8 @@ The DWIM behaviour of this command is as follows:
 (define-key global-map (kbd "C-g") #'Angelique!--keyboard-quit-dwim)
 
 ;; ============================================================================
-;;  Better kill-buffer.
+;;  Utilities.
 ;; ============================================================================
-
-(defun Angelique!--kill-buffer-dwim ()
-  "Do-what-I-mean behaviour for a general `kill-buffer'.
-The general `kill-buffer' does not actually remove the buffer
-present in the screen."
-  (interactive)
-  (cond (())))
-
-;; (define-key global-map (kbd "C-x k") #'Angelique!--kill-buffer-dwim)
 
 (use-package delsel
   :ensure nil
@@ -349,12 +324,9 @@ present in the screen."
   :init
   (setq scroll-conservatively 101 ; important!
 	scroll-margin 0)
+  (setq pixel-scroll-precision-interpolate-page t)
   :config
   (ultra-scroll-mode 1))
-
-;; ============================================================================
-;;  Utilities.
-;; ============================================================================
 
 (use-package hydra
   :ensure t)
@@ -402,7 +374,7 @@ present in the screen."
 
 (use-package browser-hist
   :ensure t
-  :commands browser-hist)
+  :defer t)
 
 (use-package consult
   :ensure t
@@ -420,6 +392,7 @@ present in the screen."
 		  :branch "main"
 		  :files (:defaults "sources/*.el"))
   :bind ("M-s M-s" . consult-omni)
+  :commands (consult-omni-apps)
   :config
   (require 'consult-omni-sources)
   (require 'consult-omni-embark)
@@ -464,6 +437,7 @@ present in the screen."
 
 (use-package yequake
   :ensure t
+  :commands (yequake-toggle)
   :custom
   (yequake-frames
 	'(("Yequake" .
@@ -472,6 +446,7 @@ present in the screen."
 	    (alpha . 0.95)
 	    (frame-parameters . ((undecorated . t)
 				 (skip-taskbar . t))))))))
+
 (use-package which-key
   :ensure nil
   :commands which-key-mode
@@ -541,7 +516,7 @@ present in the screen."
 
 ;; ============================================================================
 ;;  LSP completions go here...
-;;  This is also supplemented by lsp-booster.
+;;  TODO: supplement this using lsp-booster.
 ;; ============================================================================
 
 (use-package corfu
@@ -570,6 +545,8 @@ present in the screen."
 
 (use-package flymake
   :ensure nil
+  :custom
+  (flymake-indicator-type 'fringes)
   :hook ((prog-mode) . flymake-mode))
 
 (use-package yasnippet
@@ -825,6 +802,7 @@ this function takes the following as arguments.
 ;;  Emacs application framework (eaf) for integrated browser
 ;;  and better image-viewer. Note that eaf needs sexpdata==1.0.0 and epc as
 ;;  dependencies. No choice but to use flag --break-system-packages i guess...
+;;  Emacs needs to be compiled with gtk3 support too...without daemon-mode...
 ;; ============================================================================
 
 (defvar eaf-build-dir (expand-file-name
@@ -875,6 +853,7 @@ This will sync the contents from the repo into the builds folder."
 		   
 (use-package envrc
   :ensure t
+  :commands envrc-global-mode
   :hook
   (elpaca-after-init . (lambda ()
 			 (when (executable-find "direnv")
