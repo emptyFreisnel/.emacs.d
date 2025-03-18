@@ -223,8 +223,8 @@ inherit the customisations properly."
 ;;  Prevent the cursor from going into the minibuffer prompt.
 ;; ============================================================================
 
-(setq minibuffer-prompt-properties
- '(read-only t cursor-intangible t face minibuffer-prompt))
+(customize-set-variable 'minibuffer-prompt-properties
+			(quote (read-only t cursor-intangible t face minibuffer-prompt)))
 
 ;; ============================================================================
 ;;  Home row keybindings...
@@ -391,8 +391,10 @@ The DWIM behaviour of this command is as follows:
 		  :repo "armindarvish/consult-omni"
 		  :branch "main"
 		  :files (:defaults "sources/*.el"))
-  :bind ("M-s M-s" . consult-omni)
-  :commands (consult-omni-apps)
+  :bind
+  ("M-s M-s" . consult-omni)
+  ("M-s a" . consult-omni-apps)
+  ("M-s e" . consult-omni-external-search)
   :config
   (require 'consult-omni-sources)
   (require 'consult-omni-embark)
@@ -437,7 +439,7 @@ The DWIM behaviour of this command is as follows:
 
 (use-package yequake
   :ensure t
-  :commands (yequake-toggle)
+  :commands yequake-toggle
   :custom
   (yequake-frames
 	'(("Yequake" .
@@ -793,7 +795,7 @@ this function takes the following as arguments.
 ;; (use-package org
 ;;  :ensure nil)
 
-;; (use-package org-superstar)
+;; (use-package org-roam)
 
 ;; (use-package org-modern
 ;;  :ensure t)
