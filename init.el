@@ -229,7 +229,7 @@ inherit the customisations properly."
 ;; ============================================================================
 ;;  Home row keybindings...
 ;;  The Angelique! keybindings are transient...
-;;  TODO: To switch to Canary keyboard layout.
+;;  TODO: To switch to Canary keyboard layout and use transients / hydras.
 ;; ============================================================================
 
 (defvar-keymap Angelique!--map
@@ -260,7 +260,8 @@ inherit the customisations properly."
   (setq-default cursor-type 'box)
   (set-face-attribute 'line-number-current-line nil
 		      :foreground "cyan")
-  (message "... Angelique! deactivated ... ♡(✿ᴗ͈ˬᴗ͈)♡* "))
+  (message (propertize "... Angelique! deactivated ... ♡(✿ᴗ͈ˬᴗ͈)♡* "
+		       'face `(:foreground "cyan"))))
 
 (defun Angelique!--keybindings ()
   "~Dream the good dream, like a good pretty-princess should!♡(✿ᴗ͈ˬᴗ͈)♡*~."
@@ -269,7 +270,8 @@ inherit the customisations properly."
   (setq-default cursor-type 'bar)
   (set-face-attribute 'line-number-current-line nil
 		      :foreground "#FF83FA")
-  (message "♡(✿ᴗ͈ˬᴗ͈)♡* Angelique! navigation activated!")
+  (message (propertize "♡(✿ᴗ͈ˬᴗ͈)♡* Angelique! navigation activated!"
+		       'face `(:foreground "#FF83FA")))
   (set-transient-map Angelique!--map
 		     t ;; keep-pred = keymap will stay active until
 		       ;; keys outside the keymap is pressed.
@@ -350,7 +352,8 @@ The DWIM behaviour of this command is as follows:
 (use-package ace-window
   :ensure t
   :commands ace-window
-  :bind ("M-o" . ace-window))
+  :bind
+  ("M-o" . ace-window))
 
 ;; See karthik's post on how to use avy.
 (use-package avy
@@ -430,6 +433,7 @@ The DWIM behaviour of this command is as follows:
 (use-package vterm
   :ensure t
   :commands vterm
+  :bind ("C-c v" . vterm-other-window)
   :config
   (setq vterm-timer-delay nil)
   (add-hook 'vterm-mode-hook
@@ -480,12 +484,55 @@ The DWIM behaviour of this command is as follows:
   (minimap-update-delay 0)
   (minimap-window-location 'right))
 
+(use-package dashboard
+  :ensure t
+  :custom
+  (dashboard-banner-logo-title
+   "˚₊‧꒰ა 🎀 ໒꒱ ‧₊˚ Welcome, emptyFresinel, my beloved Hacker Princess! ˚₊‧꒰ა 🎀 ໒꒱ ‧₊˚")
+  (dashboard-startup-banner
+   (list '(("~/.emacs.d/Angelique!/Pictures/puroseka/Ena_21_trained_art.png(r).png")
+	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Ena_39_trained_art(r).png")
+	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Mizuki_3_art.png(r).png")
+	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Mizuki_7_trained_art.png(r).png")
+	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Mizuki_8_trained_art.png(r).png")
+	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Mizuki_20_trained_art.png(r).png")
+	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Mizuki_38_trained_art(r).png")
+	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Kanade_41_art(r).png")
+	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Kanade_21_trained_art(r).png")
+	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Kanade_28_trained_art(r).png")
+	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Mafuyu_20_trained_art.png(r).png"))))
+  (dashboard-center-content t)
+  
+  (dashboard-items '((recents . 5)
+		     (projects . 5)))
+  
+  (dashboard-item-shortcuts '((recents . "r")
+			      (projects . "p")))
+  (dashboard-display-icons-p t)
+  (dashboard-icon-type 'nerd-icons)
+  (dashboard-set-heading-icons t)
+  (dashboard-set-file-icons t)
+  :config
+  (set-face-attribute 'dashboard-banner-logo-title nil
+		      :foreground "#EEAEEE")
+  (set-face-attribute 'dashboard-items-face nil
+		      :foreground "#A875FF")
+  (setq initial-buffer-choice (lambda ()
+				(get-buffer-create dashboard-buffer-name)))
+  (dashboard-setup-startup-hook)
+  :hook
+  (elpaca-after-init . dashboard-insert-startupify-lists)
+  (elpaca-after-init . dashboard-initialize))
+
 ;; ============================================================================
 ;;  Configuring the minibuffer...
 ;; ============================================================================
 
 (use-package marginalia
   :ensure t
+  :bind (("M-C" . marginalia-cycle)
+	 :map minibuffer-local-map
+	 ("M-C" . marginalia-cycle))
   :hook (elpaca-after-init . marginalia-mode))
 
 (use-package vertico
@@ -603,7 +650,8 @@ This is done using `cape-capf-super'."
   ;; which is used by `completion-at-point'
   (add-hook 'completion-at-point-functions #'cape-dabbrev)
   (add-hook 'completion-at-point-functions #'cape-file)
-  (add-hook 'completion-at-point-functions #'cape-elisp-block))
+  (add-hook 'completion-at-point-functions #'cape-elisp-block)
+  (add-hook 'completion-at-point-functions #'cape-keyword))
 
 (use-package lsp-mode
   :ensure t
@@ -848,6 +896,12 @@ This will sync the contents from the repo into the builds folder."
   (eaf-browser-enable-adblocker t)
   (eaf-browser-remember-history nil)
   (eaf-browser-dark-mode nil))
+
+;; ============================================================================
+;;  Testing bed for functions.
+;; ============================================================================
+
+;; timer and message.
 
 ;; ============================================================================
 ;;  Envrc which is evaluated last in this file.

@@ -3,11 +3,12 @@
 ;;; Commentary:
 ;;; Various optimizations and better defaults for Emacs...
 
+;;; Code:
+
 ;; ============================================================================
 ;;  for Elpaca
 ;; ============================================================================
 
-;;; Code:
 (setq package-enable-at-startup nil)
 (setq package-activate-all nil)
 
