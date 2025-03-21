@@ -176,6 +176,8 @@ If you experience stuttering, increase this.")
 (add-to-list 'default-frame-alist '(height . 45))
 (add-to-list 'default-frame-alist '(cursor-color ."cyan"))
 
+(add-to-list 'initial-frame-alist '(fullscreen . maximized))
+
 (defun Angelique!--current-frame-customisations (&optional frame)
   
   "For various aesthetic customisations to be loaded in FRAME.
@@ -260,8 +262,10 @@ inherit the customisations properly."
   (setq-default cursor-type 'box)
   (set-face-attribute 'line-number-current-line nil
 		      :foreground "cyan")
-  (message (propertize "... Angelique! deactivated ... ♡(✿ᴗ͈ˬᴗ͈)♡* "
-		       'face `(:foreground "cyan"))))
+  (message
+   (propertize
+    "🩵(💠ᴗ͈ˬᴗ͈)🩵* Angelique! navigation deactivated! 🩵(💠ᴗ͈ˬᴗ͈)🩵*"
+    'face `(:foreground "cyan"))))
 
 (defun Angelique!--keybindings ()
   "~Dream the good dream, like a good pretty-princess should!♡(✿ᴗ͈ˬᴗ͈)♡*~."
@@ -270,8 +274,11 @@ inherit the customisations properly."
   (setq-default cursor-type 'bar)
   (set-face-attribute 'line-number-current-line nil
 		      :foreground "#FF83FA")
-  (message (propertize "♡(✿ᴗ͈ˬᴗ͈)♡* Angelique! navigation activated!"
-		       'face `(:foreground "#FF83FA")))
+  (message
+   (propertize
+    "🩷(🌸ᴗ͈ˬᴗ͈)🩷* Angelique! navigation activated! 🩷(🌸ᴗ͈ˬᴗ͈)🩷*"
+    'face `(:foreground "#FF83FA")))
+  
   (set-transient-map Angelique!--map
 		     t ;; keep-pred = keymap will stay active until
 		       ;; keys outside the keymap is pressed.
@@ -441,18 +448,6 @@ The DWIM behaviour of this command is as follows:
 	      (hl-line-mode nil)
 	      (display-line-numbers-mode -1)))'t)
 
-(use-package yequake
-  :ensure t
-  :commands yequake-toggle
-  :custom
-  (yequake-frames
-	'(("Yequake" .
-	   ((width . 0.5)
-	    (height . 0.5)
-	    (alpha . 0.95)
-	    (frame-parameters . ((undecorated . t)
-				 (skip-taskbar . t))))))))
-
 (use-package which-key
   :ensure nil
   :commands which-key-mode
@@ -604,7 +599,7 @@ The DWIM behaviour of this command is as follows:
 	      ("TAB" . nil))
   :config
   (setq yas-snippet-dirs
-	'("~/ .emacs.d/snippets"
+	'("~/.emacs.d/snippets"
 	  "~/.emacs.d/elpaca/builds/yasnippet-snippets/snippets"))
   :hook (elpaca-after-init . yas-global-mode))
 
@@ -685,7 +680,33 @@ This is done using `cape-capf-super'."
 
 (use-package lsp-ui
   :ensure t
-  :after lsp-mode)
+  :after lsp-mode
+  :custom
+  (lsp-ui-sideline-show-diagnostics nil) ;; flymake does not work...
+  (lsp-ui-sideline-show-hover t)
+  (lsp-ui-sideline-show-code-actions t))
+
+(use-package sideline-flymake
+  :ensure t)
+
+(use-package sideline
+  :ensure t
+  :hook
+  (flymake-mode . sideline-mode)
+  :init
+  (setq sideline-backends-right '(sideline-flymake))
+  (setq sideline-order-right 'up
+	sideline-display-backend-name t))
+
+(use-package blamer
+  :ensure t
+  :bind
+  ("C-c b" . blamer-show-posframe-commit-info)
+  ("C-c B" . blamer-mode)
+  :custom
+  (blamer-view 'overlay)
+  (blamer-idle-time 0.5)
+  (blamer-min-offset 30))
 
 (use-package lsp-pyright
   :ensure t
@@ -840,13 +861,15 @@ this function takes the following as arguments.
 ;;  Org-mode stuff goes here...
 ;; ============================================================================
 
-;; (use-package org
-;;  :ensure nil)
+(use-package org
+  :ensure nil)
 
-;; (use-package org-roam)
+(use-package org-roam
+  :ensure t
+  :commands org-roam-mode)
 
-;; (use-package org-modern
-;;  :ensure t)
+(use-package org-modern
+  :ensure t)
 
 ;; ============================================================================
 ;;  Emacs application framework (eaf) for integrated browser
@@ -899,9 +922,12 @@ This will sync the contents from the repo into the builds folder."
 
 ;; ============================================================================
 ;;  Testing bed for functions.
+;;  TODO: to have my own functions in a package for optimisation.
 ;; ============================================================================
 
-;; timer and message.
+;; (use-package Angelique!
+;;  :ensure nil
+;;  :load-path "")
 
 ;; ============================================================================
 ;;  Envrc which is evaluated last in this file.
