@@ -8,9 +8,7 @@
 ;;  See Protesilaos Stavrou excellent articles on Emacs...and minimal-emacs.
 
 ;;  Emacs is just too much sometimes...so uhm...will document as i go along...
-;;  Not sure if i wanna convert this init.el file to org...org-babel-load-file
-;;  but startup times tho? errrr let's see how the future holds....
-
+;;  Decided to convert using org-babel tangle at some point...
 ;;  i am terrible at lisp... so these little comments are my lifesavers...
 ;;  dunno if anyone would actually read this but...isabel...you can do this...
 ;;  please be kind to yourself! whoever is reading this... you are loved <3
@@ -172,9 +170,9 @@ If you experience stuttering, increase this.")
 ;; set-frame-font.
 
 (add-to-list 'default-frame-alist '(font . "Fira Code Nerd Font 11"))
-(add-to-list 'default-frame-alist '(width . 120))
-(add-to-list 'default-frame-alist '(height . 45))
 (add-to-list 'default-frame-alist '(cursor-color ."cyan"))
+(add-to-list 'default-frame-alist '(height . 45))
+(add-to-list 'default-frame-alist '(width . 120))
 
 (add-to-list 'initial-frame-alist '(fullscreen . maximized))
 
@@ -223,10 +221,17 @@ inherit the customisations properly."
 
 ;; ============================================================================
 ;;  Prevent the cursor from going into the minibuffer prompt.
+;;  Also set to have Emacs handle windows better.
 ;; ============================================================================
 
 (customize-set-variable 'minibuffer-prompt-properties
 			(quote (read-only t cursor-intangible t face minibuffer-prompt)))
+
+(customize-set-variable 'display-buffer-base-action
+			'((display-buffer-reuse-window display-buffer-pop-up-window)
+			  (reusable-frames . t)))
+
+(customize-set-variable 'even-window-sizes nil) ;; avoid resizing.
 
 ;; ============================================================================
 ;;  Home row keybindings...
@@ -324,6 +329,15 @@ The DWIM behaviour of this command is as follows:
 ;;  Utilities.
 ;; ============================================================================
 
+;; Since ya girl is using ibuffer, defer loading the default buffer-list.
+(use-package buff-menu
+  :ensure nil
+  :defer t)
+
+(use-package ibuffer
+  :ensure nil
+  :demand t)
+
 (use-package delsel
   :ensure nil
   :hook (elpaca-after-init . delete-selection-mode))
@@ -385,30 +399,6 @@ The DWIM behaviour of this command is as follows:
 (use-package browser-hist
   :ensure t
   :defer t)
-
-(use-package consult
-  :ensure t
-  :bind (;; A recursive grep
-	 ("M-s M-g" . consult-ripgrep)
-	 ("M-s M-f" . consult-find)
-	 ("M-s M-o" . consult-outline)
-	 ("M-s M-l" . consult-line)
-	 ("M-s M-b" . consult-buffer)))
-
-;;; See Sacha Chua's articles on consult-omni.
-(use-package consult-omni
-  :ensure  (:host github
-		  :repo "armindarvish/consult-omni"
-		  :branch "main"
-		  :files (:defaults "sources/*.el"))
-  :bind
-  ("M-s M-s" . consult-omni)
-  ("M-s a" . consult-omni-apps)
-  ("M-s e" . consult-omni-external-search)
-  :config
-  (require 'consult-omni-sources)
-  (require 'consult-omni-embark)
-  (consult-omni-sources-load-modules))
 
 (use-package embark
   :ensure t
@@ -519,6 +509,39 @@ The DWIM behaviour of this command is as follows:
   (elpaca-after-init . dashboard-insert-startupify-lists)
   (elpaca-after-init . dashboard-initialize))
 
+(use-package perspective
+  :ensure t
+  :bind
+  ("C-x C-b" . persp-list-buffers)
+  :custom
+  (persp-mode-prefix-key (kbd "C-c x"))
+  :hook
+  (elpaca-after-init . persp-mode))
+
+(use-package consult
+  :ensure t
+  :bind (;; A recursive grep
+	 ("M-s M-g" . consult-ripgrep)
+	 ("M-s M-f" . consult-find)
+	 ("M-s M-o" . consult-outline)
+	 ("M-s M-l" . consult-line)
+	 ("M-s M-b" . consult-buffer)))
+
+;;; See Sacha Chua's articles on consult-omni.
+(use-package consult-omni
+  :ensure  (:host github
+		  :repo "armindarvish/consult-omni"
+		  :branch "main"
+		  :files (:defaults "sources/*.el"))
+  :bind
+  ("M-s M-s" . consult-omni)
+  ("M-s a" . consult-omni-apps)
+  ("M-s e" . consult-omni-external-search)
+  :config
+  (require 'consult-omni-sources)
+  (require 'consult-omni-embark)
+  (consult-omni-sources-load-modules))
+
 ;; ============================================================================
 ;;  Configuring the minibuffer...
 ;; ============================================================================
@@ -599,7 +622,7 @@ The DWIM behaviour of this command is as follows:
 	      ("TAB" . nil))
   :config
   (setq yas-snippet-dirs
-	'("~/.emacs.d/snippets"
+	'("~/.emacs.d/etc/yasnippet/snippets"
 	  "~/.emacs.d/elpaca/builds/yasnippet-snippets/snippets"))
   :hook (elpaca-after-init . yas-global-mode))
 
@@ -669,7 +692,7 @@ This is done using `cape-capf-super'."
 		(list (cape-capf-buster #'lsp-completion-at-point)))
     (setq-local completion-at-point-functions
 		(list (cape-capf-super
-		       #'lsp-completion-at-point #'yasnippet-capf #'cape-dabbrev))))
+		       #'yasnippet-capf #'lsp-completion-at-point #'cape-dabbrev))))
   :hook
   (lsp-completion-mode . lsp-mode-setup-completion)
   (lsp-mode . lsp-enable-which-key-integration)
@@ -928,6 +951,12 @@ This will sync the contents from the repo into the builds folder."
 ;; (use-package Angelique!
 ;;  :ensure nil
 ;;  :load-path "")
+
+;; ============================================================================
+;;  Trying out EXWM...
+;; ============================================================================
+
+;; (use-package exwm)
 
 ;; ============================================================================
 ;;  Envrc which is evaluated last in this file.
