@@ -54,7 +54,7 @@
     (add-hook 'after-make-frame-functions (lambda (frame)
 					    (select-frame frame)
 					    (funcall mode -1)))))
-     
+
 (column-number-mode t)
 
 (size-indication-mode t)

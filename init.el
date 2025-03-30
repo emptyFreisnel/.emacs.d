@@ -13,6 +13,9 @@
 ;;  dunno if anyone would actually read this but...isabel...you can do this...
 ;;  please be kind to yourself! whoever is reading this... you are loved <3
 
+;;  Reminder to use the "*scratch*" buffer on functions in packages for
+;;  debugging purposes.
+
 ;; ============================================================================
 
 ;; Set up package manager...using Elpaca.
@@ -91,11 +94,14 @@ If you experience stuttering, increase this.")
 
 ;; ============================================================================
 ;;  Compile-angel to make sure packages are natively compiled.
+;;  this package actually makes my emacs initialise slower so i only activate
+;;  it when there is a new package.
 ;; ============================================================================
 
 (use-package compile-angel
   :ensure t
-  :demand t
+  :commands compile-angel-on-load-mode
+  ;; :demand t
   :config
   (setq compile-angel-verbose t) ;; set to nil to silence compile-angel.
   (push "init.el" compile-angel-excluded-files)
@@ -160,6 +166,125 @@ If you experience stuttering, increase this.")
   :hook ((prog-mode) . colorful-mode))
 
 ;; ============================================================================
+;;  Ibuffer customizations.
+;; ============================================================================
+
+(use-package ibuffer
+  :ensure nil
+  :demand t
+  :custom
+  (ibuffer-human-readable-size t)
+  (ibuffer-always-show-last-buffer t)
+  (ibuffer-show-empty-filter-groups nil)
+  (ibuffer-display-summary nil)
+  (ibuffer-expert t)
+  (ibuffer-filter-group-name-face '(:inherit (font-lock-doc-face bold)))
+  :bind
+  (("C-x b" . ibuffer)
+   ("C-x B" . switch-to-buffer)
+   ("C-x C-b" . ibuffer-other-window)
+   :map ibuffer-mode-map
+   ("M-o" . nil))
+  :hook
+  (ibuffer-mode . ibuffer-auto-mode))
+  
+(use-package ibuffer-project
+  :ensure t
+  :custom
+  (ibuffer-project-use-cache t)
+  ;; Lovingly taken and amended from
+  ;; https://github.com/seagle0128/.emacs.d/blob/master/lisp/init-ibuffer.el
+  (ibuffer-project-root-functions
+   `((ibuffer-project-project-root
+      . ,(concat (nerd-icons-octicon "nf-oct-repo"
+				    :height 1.2
+				    :face ibuffer-filter-group-name-face)
+		 " Project"))
+     (identity
+      . ,(concat (nerd-icons-octicon "nf-oct-file_directory"
+				    :height 1.2
+				    :face ibuffer-filter-group-name-face)
+		 " Directory"))
+     (file-remote-p
+      . ,(concat (nerd-icons-codicon "nf-cod-radio_tower"
+				    :height 1.2
+				    :face ibuffer-filter-group-name-face)
+		 " Remote"))))
+  :config
+  (defun ibuffer-project-function ()
+    "Group ibuffer's list by project."
+    (interactive)
+    (setq ibuffer-filter-groups (ibuffer-project-generate-filter-groups))
+    (unless (eq ibuffer-sorting-mode 'project-file-relative)
+      (ibuffer-do-sort-by-project-file-relative)))
+  :bind
+  (:map ibuffer-mode-map
+	("s t" . ibuffer-project-function))
+  :hook
+  (ibuffer-mode . ibuffer-project-function))
+
+(use-package nerd-icons-ibuffer
+  :ensure t
+  :hook
+  (ibuffer-mode . nerd-icons-ibuffer-mode))
+
+;; ============================================================================
+;;  Dashboard...because emacs needs to be cute!!!
+;;  Might use Enlight someday but will see...seems to be lighter.
+;; ============================================================================
+
+(use-package enlight
+  :ensure t
+  :defer t)
+
+(use-package dashboard
+  :ensure t
+  :custom
+  (dashboard-banner-logo-title
+   "˚₊‧꒰ა 🎀 ໒꒱ ‧₊˚ Welcome, emptyFresinel, my beloved Hacker Princess! ˚₊‧꒰ა 🎀 ໒꒱ ‧₊˚")
+  (dashboard-startup-banner
+   (list '(("~/.emacs.d/Angelique!/Pictures/puroseka/Ena_21_trained_art.png(r).png")
+	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Ena_39_trained_art(r).png")
+	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Mizuki_3_art.png(r).png")
+	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Mizuki_7_trained_art.png(r).png")
+	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Mizuki_8_trained_art.png(r).png")
+	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Mizuki_20_trained_art.png(r).png")
+	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Mizuki_38_trained_art(r).png")
+	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Kanade_41_art(r).png")
+	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Kanade_21_trained_art(r).png")
+	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Kanade_28_trained_art(r).png")
+	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Mafuyu_20_trained_art.png(r).png"))))
+  
+  (dashboard-projects-backend 'project-el)
+  (dashboard-center-content t)
+
+  ;; Use project-known-project-roots to check known projects.
+  ;; Also use project-forget-project to remove dead/deleted projects.
+  ;; project-remember-projects-under is useful to add new projects too
+  
+  (dashboard-items '((recents . 5)
+		     (projects . 5)))
+  
+  (dashboard-item-shortcuts '((recents . "r")
+			      (projects . "p")))
+  (dashboard-display-icons-p t)
+  (dashboard-icon-type 'nerd-icons)
+  (dashboard-set-heading-icons t)
+  (dashboard-set-file-icons t)
+  (dashboard-remove-missing-entry)
+  :config
+  (set-face-attribute 'dashboard-banner-logo-title nil
+		      :foreground "#EEAEEE")
+  (set-face-attribute 'dashboard-items-face nil
+		      :foreground "#A875FF")
+  (setq initial-buffer-choice (lambda ()
+				(get-buffer-create dashboard-buffer-name)))
+  (dashboard-setup-startup-hook)
+  :hook
+  (elpaca-after-init . dashboard-insert-startupify-lists)
+  (elpaca-after-init . dashboard-initialize))
+
+;; ============================================================================
 ;;  Wish emacs can expose more properties to font attributes
 ;;  or let us set priorities for layering. As it stands the region is
 ;;  an overlay so it has higher priority over text properties. so setting
@@ -171,6 +296,7 @@ If you experience stuttering, increase this.")
 
 (add-to-list 'default-frame-alist '(font . "Fira Code Nerd Font 11"))
 (add-to-list 'default-frame-alist '(cursor-color ."cyan"))
+
 (add-to-list 'default-frame-alist '(height . 45))
 (add-to-list 'default-frame-alist '(width . 120))
 
@@ -202,6 +328,8 @@ inherit the customisations properly."
 			:foreground "cyan")))
 
 (add-hook 'elpaca-after-init-hook #'Angelique!--current-frame-customisations)
+(if (daemonp) (add-hook 'server-after-make-frame-hook
+			#'Angelique!--current-frame-customisations))
 
 ;; ============================================================================
 ;;  Some personalisations that make me happy...
@@ -226,10 +354,6 @@ inherit the customisations properly."
 
 (customize-set-variable 'minibuffer-prompt-properties
 			(quote (read-only t cursor-intangible t face minibuffer-prompt)))
-
-(customize-set-variable 'display-buffer-base-action
-			'((display-buffer-reuse-window display-buffer-pop-up-window)
-			  (reusable-frames . t)))
 
 (customize-set-variable 'even-window-sizes nil) ;; avoid resizing.
 
@@ -290,6 +414,7 @@ inherit the customisations properly."
 		     #'Angelique!--normal-cursor))
 
 (define-key global-map (kbd "C-x m") nil)
+(define-key global-map (kbd "C-x C-l") nil)
 (define-key global-map (kbd "C-c n") #'Angelique!--keybindings)
 
 ;; ============================================================================
@@ -329,14 +454,12 @@ The DWIM behaviour of this command is as follows:
 ;;  Utilities.
 ;; ============================================================================
 
-;; Since ya girl is using ibuffer, defer loading the default buffer-list.
-(use-package buff-menu
+(use-package tab-bar
   :ensure nil
-  :defer t)
-
-(use-package ibuffer
-  :ensure nil
-  :demand t)
+  :custom
+  (tab-bar-new-tab-choice "*dashboard*")
+  :hook
+  (elpaca-after-init . tab-bar-mode))
 
 (use-package delsel
   :ensure nil
@@ -355,7 +478,8 @@ The DWIM behaviour of this command is as follows:
   :ensure t)
 
 (use-package transient
-  :ensure t)
+  :ensure t
+  :commands transient)
 
 (use-package magit
   :ensure t
@@ -368,11 +492,14 @@ The DWIM behaviour of this command is as follows:
   :after magit)
 
 (use-package compat
-  :ensure t)
+  :ensure t
+  :defer t)
     
 (use-package ace-window
   :ensure t
   :commands ace-window
+  :custom
+  (aw-keys '(?a ?r ?s ?t ?g ?m ?n ?e ?i))
   :bind
   ("M-o" . ace-window))
 
@@ -380,8 +507,9 @@ The DWIM behaviour of this command is as follows:
 (use-package avy
   :ensure t
   :commands (avy-goto-char-timer)
-  :config
-  (setq avy-timeout-seconds 0.4)
+  :custom
+  (avy-keys '(?a ?r ?s ?t ?g ?m ?n ?e ?i))
+  (avy-timeout-seconds 0.4)
   :bind ("M-r" . avy-goto-char-timer))
 
 (use-package symbol-overlay
@@ -419,10 +547,6 @@ The DWIM behaviour of this command is as follows:
 (use-package embark-consult
   :ensure t)
 
-(use-package sudo-edit
-  :ensure t
-  :commands sudo-edit)
-
 (use-package vundo
   :ensure t
   :commands vundo)
@@ -455,69 +579,6 @@ The DWIM behaviour of this command is as follows:
 (use-package pdf-tools
   :ensure t)
 
-(use-package minimap
-  ;; its nice to have the minimap sometimes even tho i usually dont use it...
-  :ensure t
-  :defer t
-  :commands minimap-mode
-  :config
-  (set-face-attribute 'minimap-current-line-face nil
-		      :background "#EEAEEE")
-  (set-face-attribute 'minimap-active-region-background nil
-		      :background "#120333")
-  :custom
-  (minimap-update-delay 0)
-  (minimap-window-location 'right))
-
-(use-package dashboard
-  :ensure t
-  :custom
-  (dashboard-banner-logo-title
-   "˚₊‧꒰ა 🎀 ໒꒱ ‧₊˚ Welcome, emptyFresinel, my beloved Hacker Princess! ˚₊‧꒰ა 🎀 ໒꒱ ‧₊˚")
-  (dashboard-startup-banner
-   (list '(("~/.emacs.d/Angelique!/Pictures/puroseka/Ena_21_trained_art.png(r).png")
-	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Ena_39_trained_art(r).png")
-	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Mizuki_3_art.png(r).png")
-	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Mizuki_7_trained_art.png(r).png")
-	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Mizuki_8_trained_art.png(r).png")
-	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Mizuki_20_trained_art.png(r).png")
-	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Mizuki_38_trained_art(r).png")
-	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Kanade_41_art(r).png")
-	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Kanade_21_trained_art(r).png")
-	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Kanade_28_trained_art(r).png")
-	   ("~/.emacs.d/Angelique!/Pictures/puroseka/Mafuyu_20_trained_art.png(r).png"))))
-  (dashboard-center-content t)
-  
-  (dashboard-items '((recents . 5)
-		     (projects . 5)))
-  
-  (dashboard-item-shortcuts '((recents . "r")
-			      (projects . "p")))
-  (dashboard-display-icons-p t)
-  (dashboard-icon-type 'nerd-icons)
-  (dashboard-set-heading-icons t)
-  (dashboard-set-file-icons t)
-  :config
-  (set-face-attribute 'dashboard-banner-logo-title nil
-		      :foreground "#EEAEEE")
-  (set-face-attribute 'dashboard-items-face nil
-		      :foreground "#A875FF")
-  (setq initial-buffer-choice (lambda ()
-				(get-buffer-create dashboard-buffer-name)))
-  (dashboard-setup-startup-hook)
-  :hook
-  (elpaca-after-init . dashboard-insert-startupify-lists)
-  (elpaca-after-init . dashboard-initialize))
-
-(use-package perspective
-  :ensure t
-  :bind
-  ("C-x C-b" . persp-list-buffers)
-  :custom
-  (persp-mode-prefix-key (kbd "C-c x"))
-  :hook
-  (elpaca-after-init . persp-mode))
-
 (use-package consult
   :ensure t
   :bind (;; A recursive grep
@@ -535,12 +596,37 @@ The DWIM behaviour of this command is as follows:
 		  :files (:defaults "sources/*.el"))
   :bind
   ("M-s M-s" . consult-omni)
+  ("M-s M-e" . consult-omni-external-search)
   ("M-s a" . consult-omni-apps)
-  ("M-s e" . consult-omni-external-search)
   :config
   (require 'consult-omni-sources)
   (require 'consult-omni-embark)
   (consult-omni-sources-load-modules))
+
+(use-package keycast
+  :ensure t
+  :config
+  ;; "https://github.com/tarsius/keycast/issues/7"
+  ;; Can't really be deactivated...will have to make do.
+  (define-minor-mode keycast-mode
+    "Show current command and keybinding in the modeline
+(fix for use with doom-modeline)."
+    :global t
+    (if keycast-mode
+	(add-hook 'pre-command-hook 'keycast--update t)
+     (remove-hook 'pre-command-hook 'keycast--update)))
+  (add-to-list 'global-mode-string '("" keycast-mode-line))
+  :hook
+  (elpaca-after-init . keycast-mode))
+
+(use-package eyebrowse
+  :ensure t
+  :custom
+  (eyebrowse-wrap-around t)
+  (eyebrowse-new-workspace "*dashboard*")
+  (eyebrowse-keymap-prefix (kbd "C-x C-n"))
+  :hook
+  (elpaca-after-init . eyebrowse-mode))
 
 ;; ============================================================================
 ;;  Configuring the minibuffer...
@@ -574,6 +660,8 @@ The DWIM behaviour of this command is as follows:
 (use-package recentf
   :ensure nil
   :bind ("C-x C-r" . recentf)
+  :custom
+  (recentf-max-saved-items 50)
   :config
   (recentf-mode 1))
  
@@ -707,7 +795,11 @@ This is done using `cape-capf-super'."
   :custom
   (lsp-ui-sideline-show-diagnostics nil) ;; flymake does not work...
   (lsp-ui-sideline-show-hover t)
-  (lsp-ui-sideline-show-code-actions t))
+  (lsp-ui-sideline-show-code-actions t)
+  :hook
+  ;; Suppress "<tab-bar> <mouse-movement> is undefined" warnings.
+  (lsp-after-initialize . (lambda ()
+			    (local-set-key (kbd "<tab-bar> <mouse-movement>") #'ignore))))
 
 (use-package sideline-flymake
   :ensure t)
@@ -767,12 +859,6 @@ This is done using `cape-capf-super'."
 ;;  Do take a look at treesit-auto for some ideas.
 ;; ============================================================================
 
-;; This is my own self-defined mode for elisp with tree-sitter.
-;; just for my own personal use...most certainly not production ready.
-
-;; (use-package elisp-ts-mode
-;;   :ensure ())
-
 (defun Angelique!--treesit (language-specs)
   
   "Batch configure Tree-sitter for multiple `LANGUAGE-SPECS'.
@@ -828,10 +914,6 @@ this function takes the following as arguments.
     ("https://github.com/tree-sitter/tree-sitter-python")
     "\\.py\\'"
     python-mode)
-   (elisp
-    ("https://github.com/Wilfred/tree-sitter-elisp")
-    "\\.el\\'"
-    emacs-lisp-mode)
    (c
     ("https://github.com/tree-sitter/tree-sitter-c")
     "\\.c\\'"
@@ -859,6 +941,7 @@ this function takes the following as arguments.
     ("<tab>" . dirvish-subtree-toggle)
     ("TAB" . dirvish-subtree-toggle))
   :config
+  (global-set-key (kbd "C-x C-j") #'dired-jump-other-window)
   (set-face-attribute 'dirvish-hl-line nil
 		      :inherit nil)
   (setq dirvish-mode-line-format
@@ -895,55 +978,6 @@ this function takes the following as arguments.
   :ensure t)
 
 ;; ============================================================================
-;;  Emacs application framework (eaf) for integrated browser
-;;  and better image-viewer. Note that eaf needs sexpdata==1.0.0 and epc as
-;;  dependencies. No choice but to use flag --break-system-packages i guess...
-;;  Emacs needs to be compiled with gtk3 support too...without daemon-mode...
-;; ============================================================================
-
-(defvar eaf-build-dir (expand-file-name
-		       "elpaca/builds/eaf/" user-emacs-directory))
-(defvar eaf-repo-dir (expand-file-name
-		      "elpaca/repos/emacs-application-framework/*" user-emacs-directory))
-(defvar eaf-json-file (expand-file-name
-		       "applications.json" eaf-build-dir))
-
-(defun eaf-sync-build-dir-from-repo ()
-  "Elpaca only builds .el files and link them to the Elpaca builds folder.
-As EAF needs Python and its applications.json file to work....
-This will sync the contents from the repo into the builds folder."
-  (interactive)
-  (unless (file-exists-p eaf-json-file)
-    (start-process-shell-command "eaf-delete"
-				 "*Messages*"
-				 (format "rm -rf %s/eaf.el" eaf-build-dir))
-    (start-process-shell-command "eaf-sync"
-				 "*Messages*"
-				 (format "cp -rf %s %s" eaf-repo-dir eaf-build-dir))
-    (message "eaf-sync-build-dir-from-repo is successful!"))
-  (when (file-exists-p eaf-json-file)
-  (message "eaf-json-file found! Skipping sync...")))
-
-(use-package eaf
-  :ensure (:host github
-		 :repo "emacs-eaf/emacs-application-framework")
-  :demand (eaf-search-it)
-  :bind
-  ("M-s M-e" . eaf-search-it)
-  :hook
-  (elpaca-after-init . eaf-sync-build-dir-from-repo)
-  :config
-  (require 'eaf)
-  (require 'eaf-browser)
-  (require 'eaf-image-viewer)
-  :custom
-  (eaf-byte-compile-apps t)
-  (eaf-browser-default-search-engine "duckduckgo")
-  (eaf-browser-enable-adblocker t)
-  (eaf-browser-remember-history nil)
-  (eaf-browser-dark-mode nil))
-
-;; ============================================================================
 ;;  Testing bed for functions.
 ;;  TODO: to have my own functions in a package for optimisation.
 ;; ============================================================================
@@ -956,7 +990,8 @@ This will sync the contents from the repo into the builds folder."
 ;;  Trying out EXWM...
 ;; ============================================================================
 
-;; (use-package exwm)
+;; (use-package exwm
+;;  :ensure t)
 
 ;; ============================================================================
 ;;  Envrc which is evaluated last in this file.
