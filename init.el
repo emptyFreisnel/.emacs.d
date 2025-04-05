@@ -349,29 +349,6 @@ inherit the customisations properly."
   (make-directory Angelique! t))
 
 ;; ============================================================================
-;;  Hyperbole...
-;;  Work needs to be done to change the internals a bit i think...
-;; ============================================================================
-
-(use-package hyperbole
-  :ensure (:host github
-		 :repo "emacsmirror/hyperbole")
-  :defer 1
-  :bind (:map hyperbole-mode-map
-	      ("M-o" . nil)
-	      ("C-c o" . hkey-operate))
-  :config
-  (set-face-attribute 'ibut-face nil
-		      :foreground "deep pink")
-  ;; note that this will activate avy-dispatch-always
-  ;; this is left for discoverability; its more easier
-  ;; to eval it myself. also will need to advice-add to change the
-  ;; internals. TODO.
-  ;; (advice-add #'hkey-ace-window-setup :override #'Angelique-hkey-aw-setup)
-  ;; (hkey-ace-window-setup)
-  (hyperbole-mode))
-
-;; ============================================================================
 ;;  Home row keybindings...and packages that assist in moving sentences.
 ;; ============================================================================
 
@@ -1114,7 +1091,11 @@ this function takes the following as arguments.
 	"-l --almost-all --human-readable --group-directories-first --no-group"))
 
 (use-package dired+
-  :ensure (:host github :repo "emacsmirror/dired-plus") :defer 1)
+  :ensure (:host github :repo "emacsmirror/dired-plus")
+  :hook (dired-mode . (lambda ()
+			(set-face-attribute 'dirvish-file-time nil
+					    :inherit nil
+					    :foreground "#A875FF"))))
 
 (use-package trashed
   :ensure t
@@ -1130,7 +1111,8 @@ this function takes the following as arguments.
 ;; ============================================================================
 
 (use-package org
-  :ensure nil
+  :ensure t
+  :defer t
   :custom
   (org-directory "~/.emacs.d/Angelique!/org")
   (org-default-notes-file (convert-standard-filename "~/.emacs.d/Angelique!/org/.notes"))
@@ -1140,10 +1122,16 @@ this function takes the following as arguments.
 
 (use-package org-roam
   :ensure t
+  :after org
   :commands org-roam-mode)
 
+(use-package org-roam-ui
+  :ensure t
+  :commands org-roam-ui-mode)
+
 (use-package org-modern
-  :ensure t)
+  :ensure t
+  :after org)
 
 ;; ============================================================================
 ;;  Testing bed for functions.
