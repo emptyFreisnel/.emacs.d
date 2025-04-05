@@ -33,6 +33,7 @@
 
 (setq frame-inhibit-implied-resize t)
 (setq frame-resize-pixelwise t)
+
 (setq window-resize-pixelwise t)
 
 (setq load-prefer-newer t)
@@ -64,13 +65,23 @@
 
 (fset 'yes-or-no-p 'y-or-n-p)
 
-(setq warning-minimum-level :emergency) ;; warnings are annoying!
+(setq warning-minimum-level :emergency)
+(setq byte-compile-warnings '(not obsolete))
+(setq warning-suppress-log-types '((comp) (bytecomp))) ;; warnings are annoying!
+
 (setq create-lockfiles nil)
+
+(setq delete-old-versions t
+      kept-new-versions 5
+      kept-old-versions 2)
 
 (setq set-language-environment "UTF-8")
 (setq default-input-method nil)
 
 (setq enable-recursive-minibuffers t)
+(minibuffer-depth-indicate-mode 1)
+
+(setq confirm-kill-emacs #'y-or-n-p)
 
 ;; ============================================================================
 ;;  Startup
