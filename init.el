@@ -853,6 +853,18 @@ The DWIM behaviour of this command is as follows:
 ;;  dape seems to be nice.
 ;; ============================================================================
 
+(use-package cape
+  :ensure t
+  :commands (cape-dabbrev cape-file cape-elisp-block)
+  :bind ("C-c p" . cape-prefix-map)
+  :init
+  ;; Add to the global default value of `completion-at-point-functions'
+  ;; which is used by `completion-at-point'
+  (add-hook 'completion-at-point-functions #'cape-dabbrev)
+  (add-hook 'completion-at-point-functions #'cape-file)
+  (add-hook 'completion-at-point-functions #'cape-elisp-block)
+  (add-hook 'completion-at-point-functions #'cape-keyword))
+
 (use-package corfu
   :ensure t
   :hook (elpaca-after-init . global-corfu-mode)
@@ -890,10 +902,12 @@ The DWIM behaviour of this command is as follows:
     ;; `tempel-expand' *before* the main programming mode Capf, such
     ;; that it will be tried first.
     (setq-local completion-at-point-functions
-		(cons #'tempel-expand
+		(cons #'tempel-complete
 		      completion-at-point-functions)))
   :hook
-  (prog-mode . tempel-setup-capf))
+  ((prog-mode
+    conf-mode
+    text-mode) . tempel-setup-capf))
 
 (use-package tempel-collection
   :ensure t
@@ -901,31 +915,19 @@ The DWIM behaviour of this command is as follows:
 
 (defun elisp-super-capf ()
 
-  "Unifies `tempel-expand' with `elisp-completion-at-point' for elisp editing.
+  "Unifies `tempel-complete' with `elisp-completion-at-point' for elisp editing.
 This is done using `cape-capf-super'."
 
   (setq-local completion-at-point-functions
 	      (list (cape-capf-super
+		     #'tempel-complete
 		     #'elisp-completion-at-point
-		     #'tempel-expand
 		     #'cape-dabbrev))))
 
 (dolist (elisp-capf-hook '(emacs-lisp-mode-hook
 			   lisp-interaction-mode-hook
 			   ielm-mode-hook))
   (add-hook elisp-capf-hook #'elisp-super-capf))
-
-(use-package cape
-  :ensure t
-  :commands (cape-dabbrev cape-file cape-elisp-block)
-  :bind ("C-c p" . cape-prefix-map)
-  :init
-  ;; Add to the global default value of `completion-at-point-functions'
-  ;; which is used by `completion-at-point'
-  (add-hook 'completion-at-point-functions #'cape-dabbrev)
-  (add-hook 'completion-at-point-functions #'cape-file)
-  (add-hook 'completion-at-point-functions #'cape-elisp-block)
-  (add-hook 'completion-at-point-functions #'cape-keyword))
 
 (use-package eglot
   :ensure nil
@@ -937,7 +939,7 @@ This is done using `cape-capf-super'."
   (defun eglot-setup-completion ()
     (setq-local completion-at-point-functions
 		(list (cape-capf-super
-		       #'eglot-completion-at-point #'tempel-expand #'cape-file #'cape-dabbrev))))
+		       #'eglot-completion-at-point #'tempel-complete #'cape-file #'cape-dabbrev))))
   :hook
   (eglot-managed-mode . eglot-setup-completion)
   ((python-ts-mode
