@@ -109,6 +109,7 @@ If you experience stuttering, increase this.")
   (setq compile-angel-verbose t) ;; set to nil to silence compile-angel.
   (push "init.el" compile-angel-excluded-files)
   (push "early-init.el" compile-angel-excluded-files)
+  (push "Angelique!.el" compile-angel-excluded-files)
   (compile-angel-on-load-mode)
   (add-hook 'emacs-lisp-mode-hook #'compile-angel-on-save-local-mode))
 
@@ -185,7 +186,6 @@ If you experience stuttering, increase this.")
   (ibuffer-filter-group-name-face '(:inherit (font-lock-doc-face bold)))
   :bind
   (("C-x b" . ibuffer)
-   ("C-x B" . switch-to-buffer)
    ("C-x C-b" . ibuffer-other-window)
    :map ibuffer-mode-map
    ("M-o" . nil))
@@ -224,7 +224,7 @@ If you experience stuttering, increase this.")
   ;; leaving this for now
   (:map ibuffer-mode-map
 	("s t" . ibuffer-project-function))
-  :hook (ibuffer-mode . ibuffer-project-function))
+  :hook (ibuffer . ibuffer-project-function))
 
 (use-package nerd-icons-ibuffer
   :ensure t
@@ -232,12 +232,8 @@ If you experience stuttering, increase this.")
 
 ;; ============================================================================
 ;;  Dashboard...because emacs needs to be cute!!!
-;;  Might use Enlight someday but will see...seems to be lighter.
+;;  Need to see about enlight...but maybe create my own someday?
 ;; ============================================================================
-
-(use-package enlight
-  :ensure t
-  :commands enlight)
 
 (use-package dashboard
   :ensure t
@@ -294,9 +290,12 @@ If you experience stuttering, increase this.")
 ;; ============================================================================
 
 ;; using daemon-mode...use default-frame-alist instead of
-;; set-frame-font.
+;; set-frame-font. also also, use menu-set-font to check out new fonts.
+;; https://www.gnu.org/software/emacs/manual/html_node/emacs/Fonts.html
 
-(add-to-list 'default-frame-alist '(font . "Fira Code Nerd Font 11"))
+;; (add-to-list 'default-frame-alist '(font . "JetBrains Mono Nerd Font 12"))
+
+(add-to-list 'default-frame-alist '(font . "FiraCode Nerd Font Propo 11"))
 (add-to-list 'default-frame-alist '(cursor-color ."cyan"))
 
 (add-to-list 'default-frame-alist '(height . 45))
@@ -338,7 +337,15 @@ inherit the customisations properly."
 ;;  functions and perhaps my own little packages.
 ;; ============================================================================
 
-(setq custom-file null-device) ;; not using customize feature.
+;; not using customize feature.
+(setq custom-file null-device)
+
+;; tell emacs to refresh buffers
+;; when files are changed on disk.
+(global-auto-revert-mode)
+
+;; easier pop from C-u C-SPC
+(setq set-mark-command-repeat-pop t)
 
 (require 'server)
 (unless (server-running-p)
@@ -353,13 +360,10 @@ inherit the customisations properly."
 ;; ============================================================================
 
 ;; See karthik's post on how to use avy.
-;; TODO: wish i can do something like functionality similar
-;; to telepath or leap?
 (use-package avy
   :ensure t
   :defer 2
-  :commands (avy-goto-char-timer
-	     avy-goto-char-2)
+  :commands (avy-goto-char-2)
   :custom
   (avy-keys '(?a ?r ?s ?t ?g ?m ?n ?e ?i))
   (avy-timeout-seconds 0.35)
@@ -387,6 +391,7 @@ inherit the customisations properly."
   :config
 
   (defun Angelique!--normal-cursor ()
+
     "Cursor indicator for Angelique!"
     (interactive)
     (setq-default cursor-type 'box)
@@ -414,8 +419,6 @@ inherit the customisations properly."
    (kbd "M-i")
    (defhydra Angelique!--hydra-map
      (:pre Angelique!--keybinds :post Angelique!--normal-cursor :color red)
-     ;; Set mark.
-     ("m" set-mark-command "Set mark")
      ;; Normal navigation.
      ("n" backward-char)
      ("e" next-line)
@@ -424,7 +427,6 @@ inherit the customisations properly."
      ;; Slurping and barfing.
      ("a" sp-backward-slurp-sexp)
      ("t" sp-forward-slurp-sexp)
-     ("T" delete-pair)
      ;; Advanced navigation.
      ("C-a" crux-move-beginning-of-line)
      ("C-e" move-end-of-line)
@@ -436,13 +438,21 @@ inherit the customisations properly."
      ("C-M-n" backward-sexp)
      ("C-M-o" forward-sexp)
      ;; More easy to reach keys for yank/kill
-     ("d" delete-region :color blue)
      ("w" sp-delete-word)
      ("f" sp-kill-sexp)
      ("C-d" delete-char)
      ("C-w" kill-region)
-     ;; Misc
+     ("d" delete-region "delete-region" :color blue)
+     ("p" delete-pair "delete-pair" :color blue)
+     ;; Set mark.
+     ("m" set-mark-command "Set mark")
+          ;; Misc
+     ("b" switch-to-buffer "switch-to-buffer" :color blue)
+     ("q" dirvish "Dirvish" :color blue)
      ("x" nil "Quit"))))
+
+(use-package pretty-hydra
+  :ensure t)
 
 ;; disabled commands go here...
 (define-key global-map (kbd "C-x m") nil)
@@ -460,50 +470,73 @@ inherit the customisations properly."
 ;; https://protesilaos.com/emacs/dotemacs#h:50f8b1e4-b14e-453f-a37e-1c0e495ab80f
 (use-package window ;; window.el
   :ensure nil
+  :config
+  ;; https://www.emacswiki.org/emacs/WindowResize
+  ;; Code by Hirose Yuuji and Bob Wiener
+  (defun resize-window (&optional arg)
+    "Resize window interactively."
+    (interactive "p")
+    (if (one-window-p) (error "Cannot resize sole window"))
+    (or arg (setq arg 1))
+    (let (c)
+      (catch 'done
+	(while t
+	  (message
+	 "h=heighten, s=shrink, w=widen, n=narrow (by %d);  1-9=unit, q=quit"
+	 arg)
+	  (setq c (read-char))
+	  (condition-case ()
+	    (cond
+	     ((= c ?h) (enlarge-window arg))
+	     ((= c ?s) (shrink-window arg))
+	     ((= c ?w) (enlarge-window-horizontally arg))
+	     ((= c ?n) (shrink-window-horizontally arg))
+	     ((= c ?\^G) (keyboard-quit))
+	     ((= c ?q) (throw 'done t))
+	     ((and (> c ?0) (<= c ?9)) (setq arg (- c ?0)))
+	     (t (beep)))
+	  (error (beep)))))
+      (message "Done.")))
+  ;; TODO: refactor like so? using a defmacro?
+  ;; (enlarge-window (prefix-numeric-value 4))
   :custom
   (kill-buffer-quit-windows t)
   (even-window-sizes nil)
   (display-buffer-alist
-   '(("\\*Help\\*"
+   '(("\\`\\*\\(Help\\|helpful .*\\|Apropos\\|Occur\\)\\*\\'"
       (display-buffer-at-bottom)
       (window-height . 0.3))
-     ("*helpful .*: .*\\*"
-      (display-buffer-at-bottom)
-      (window-height . 0.3))
-     ("\\*Apropos\\*"
-      (display-buffer-at-bottom)
-      (window-height . 0.3))
-     ("\\*Embark Collect: .*"
+     ("\\*Embark Collect: .*\\*"
       (display-buffer-at-bottom)
       (window-height . 0.3))
      ("\\*Embark Actions\\*"
       (display-buffer-at-bottom)
       (window-height . fit-window-to-buffer)
       (window-parameters. ((no-other-window . t)
-			   (mode-line-format . none))))
-     ("\\*Occur\\*"
-      (display-buffer-at-bottom)
-      (window-height . 0.3)))))
+			   (mode-line-format . none)))))))
 
 (use-package window-x
   :ensure nil
   :config
-  (defhydra Angelique!--window-x-hydra-map (:color amaranth :hint nil)
+  (defhydra Angelique!--window-x-hydra-map (:color red :hint nil)
   "
-^Rotate / Transpose windows?^                                   _q_: Quit
+^Angelique! Window Control...^                                   _q_: Quit
 ^^^^^^^^----------------------------------------------------------------------
 _n_: rotate-windows
 _e_: rotate-windows-back                     _l_: flip-window-layout-horizontally
 _i_: rotate-window-layout-clockwise          _u_: flip-window-layout-vertically
 _o_: rotate-window-layout-anticlockwise      _y_: transpose-window-layout
+
+_;_: resize-window
 "
   ("n" rotate-windows)
-  ("e" rotate-windows-back)
+  ("e" rotate-window-sback)
   ("i" rotate-window-layout-clockwise)
   ("o" rotate-window-layout-anticlockwise)
   ("l" flip-window-layout-horizontally)
   ("u" flip-window-layout-vertically)
   ("y" transpose-window-layout)
+  (";" resize-window)
   ("q" nil "Quit"))
   :bind ("M-;" . Angelique!--window-x-hydra-map/body))
 
@@ -626,21 +659,22 @@ The DWIM behaviour of this command is as follows:
 (use-package embark
   :ensure t
   :bind (("C-;" . embark-act)
+	 ("C-:" . embark-dwim)
 	 :map minibuffer-local-map
 	 ("C-c C-c" . embark-collect)
 	 ("C-c C-e" . embark-export))
   :config (set-face-attribute 'embark-target nil
 			      :background "#4B0082"))
 
+(use-package embark-consult
+  :ensure t
+  :hook (embark-collect-mode . consult-preview-at-point-mode))
+
 (use-package smartparens
   :ensure t
   :defer 1
   :hook (prog-mode)
   :config (require 'smartparens-config))
-
-(use-package embark-consult
-  :ensure t
-  :hook (embark-collect-mode . consult-preview-at-point-mode))
 
 (use-package vundo
   :ensure t
@@ -682,12 +716,6 @@ The DWIM behaviour of this command is as follows:
 
 (use-package consult
   :ensure t
-  :commands (consult-ripgrep
-	     consult-grep
-	     consult-find
-	     consult-outline
-	     consult-line
-	     consult-buffer)
   :bind (;; A recursive grep
 	 ("M-s M-g" . consult-ripgrep)
 	 ("M-s M-G" . consult-grep)
@@ -710,6 +738,21 @@ The DWIM behaviour of this command is as follows:
   (require 'consult-omni-sources)
   (require 'consult-omni-embark)
   (consult-omni-sources-load-modules))
+
+(use-package consult-eglot
+  :ensure (:host github
+		 :repo "mohkale/consult-eglot"
+		 :files (:defaults "extensions/consult-eglot-embark/*.el"))
+  :after consult
+  :config
+  (with-eval-after-load 'embark
+    (with-eval-after-load 'consult-eglot
+      (require 'consult-eglot-embark)
+      (consult-eglot-embark-mode))))
+
+(use-package wgrep
+  :ensure t
+  :defer 1)
 
 (use-package keycast
   :ensure t
@@ -734,9 +777,13 @@ The DWIM behaviour of this command is as follows:
   (eyebrowse-keymap-prefix (kbd "C-x C-n"))
   :hook (elpaca-after-init . eyebrowse-mode))
 
-;; (use-package polymode
-;;   :ensure t
-;;   :defer 2)
+(use-package polymode
+  :ensure t
+  :defer 2)
+
+(use-package emms
+  :ensure t
+  :defer 2)
 
 ;; ============================================================================
 ;;  Better help functionality for emacs.
@@ -800,9 +847,10 @@ The DWIM behaviour of this command is as follows:
   :hook (elpaca-after-init . savehist-mode))
 
 ;; ============================================================================
-;;  LSP completions go here...
-;;  TODO: supplement this using lsp-booster.
-;;  Will need to try out eglot sometime...
+;;  LSP completions go here... using eglot.  removed lsp-mode as i wanna
+;;  go as built-in as possible for the time being. for debugging, i feel like
+;;  dap-mode relies on dependencies i dont really need? (treemacs)
+;;  dape seems to be nice.
 ;; ============================================================================
 
 (use-package corfu
@@ -829,50 +877,37 @@ The DWIM behaviour of this command is as follows:
     (corfu-history-mode 1)
     (add-to-list 'savehist-additional-variables 'corfu-history)))
 
-(use-package flymake
-  :ensure nil
-  :commands flymake-mode
-  :custom
-  (flymake-indicator-type 'fringes)
-  :hook
-  ((prog-mode) . flymake-mode)
-  ((emacs-lisp-mode) . (lambda ()
-			(remove-hook 'flymake-diagnostic-functions #'elisp-flymake-byte-compile t))))
-
-(use-package yasnippet
+(use-package tempel
   :ensure t
-  :bind (:map yas-minor-mode-map
-	      ("TAB" . nil))
-  :config
-  (setq yas-snippet-dirs
-	'("~/.emacs.d/etc/yasnippet/snippets"
-	  "~/.emacs.d/elpaca/builds/yasnippet-snippets/snippets"))
-  :hook (elpaca-after-init . yas-global-mode))
-
-(use-package yasnippet-snippets
-  :ensure t)
-
-(use-package yasnippet-capf
-  :ensure t
-  :demand t
-  :after cape
   :init
-  (defun yasnippet-capf-dwim ()
-    (add-to-list 'completion-at-point-functions #'yasnippet-capf))
-  :hook ((emacs-lisp-mode
-	  python-ts-mode
-	  c-ts-mode
-	  c++-ts-mode) . yasnippet-capf-dwim))
+  ;; Setup completion at point
+  (defun tempel-setup-capf ()
+    ;; Add the Tempel Capf to `completion-at-point-functions'.
+    ;; `tempel-expand' only triggers on exact matches. Alternatively use
+    ;; `tempel-complete' if you want to see all matches, but then you
+    ;; should also configure `tempel-trigger-prefix', such that Tempel
+    ;; does not trigger too often when you don't expect it. NOTE: We add
+    ;; `tempel-expand' *before* the main programming mode Capf, such
+    ;; that it will be tried first.
+    (setq-local completion-at-point-functions
+		(cons #'tempel-expand
+		      completion-at-point-functions)))
+  :hook
+  (prog-mode . tempel-setup-capf))
+
+(use-package tempel-collection
+  :ensure t
+  :after tempel)
 
 (defun elisp-super-capf ()
 
-  "Unifies `yasnippet-capf' with `elisp-completion-at-point' for elisp editing.
+  "Unifies `tempel-expand' with `elisp-completion-at-point' for elisp editing.
 This is done using `cape-capf-super'."
 
   (setq-local completion-at-point-functions
 	      (list (cape-capf-super
 		     #'elisp-completion-at-point
-		     #'yasnippet-capf
+		     #'tempel-expand
 		     #'cape-dabbrev))))
 
 (dolist (elisp-capf-hook '(emacs-lisp-mode-hook
@@ -892,67 +927,77 @@ This is done using `cape-capf-super'."
   (add-hook 'completion-at-point-functions #'cape-elisp-block)
   (add-hook 'completion-at-point-functions #'cape-keyword))
 
-(use-package lsp-mode
-  :ensure t
-  :defer 2
-  :commands (lsp lsp-deferred)
-  :bind-keymap
-  ("C-c l" . lsp-command-map)
-  :custom
-  (lsp-completion-provider :none) ;; using corfu!
-  (lsp-idle-delay 0.3)
+(use-package eglot
+  :ensure nil
+  :config
+  (setq completion-category-overrides '((eglot (styles orderless))
+					(eglot-capf (styles orderless))))
+  (advice-add 'eglot-completion-at-point :around #'cape-wrap-buster)
   :init
-  (defun orderless-dispatch-flex-first (_pattern index _total)
-    (and (eq index 0) 'orderless-flex))
-  (defun lsp-mode-setup-completion ()
-    (setf (alist-get 'styles (alist-get 'lsp-capf completion-category-defaults))
-	  '(orderless))
-    ;; Optionally configure the first word as flex filtered.
-    (add-hook 'orderless-style-dispatchers #'orderless-dispatch-flex-first)
-    ;; Optionally configure the cape-capf-buster.
-    (setq-local completion-at-point-functions
-		(list (cape-capf-buster #'lsp-completion-at-point)))
+  (defun eglot-setup-completion ()
     (setq-local completion-at-point-functions
 		(list (cape-capf-super
-		       #'yasnippet-capf #'lsp-completion-at-point #'cape-dabbrev))))
+		       #'eglot-completion-at-point #'tempel-expand #'cape-file #'cape-dabbrev))))
   :hook
-  (lsp-completion-mode . lsp-mode-setup-completion)
-  (lsp-mode . lsp-enable-which-key-integration)
+  (eglot-managed-mode . eglot-setup-completion)
   ((python-ts-mode
     c-ts-mode
     c++-ts-mode
-    rust-ts-mode) . lsp-deferred))
+    rust-ts-mode) . eglot-ensure))
 
-(use-package lsp-ui
+(use-package eldoc-box
   :ensure t
-  :defer 2
-  :after lsp-mode
-  :custom
-  (lsp-ui-sideline-show-diagnostics nil) ;; flymake does not work...
-  (lsp-ui-sideline-show-hover t)
-  (lsp-ui-sideline-show-code-actions t)
+  :config
+  (set-face-attribute 'eldoc-box-border nil
+		      :background "#89B4FA")
   :hook
-  ;; Suppress "<tab-bar> <mouse-movement> is undefined" warnings.
-  (lsp-after-initialize . (lambda ()
-			    (local-set-key (kbd "<tab-bar> <mouse-movement>") #'ignore))))
+  (emacs-lisp-mode . eldoc-box-hover-mode)
+  (eglot-managed-mode . eldoc-box-hover-mode))
 
-(use-package dap-mode
+(use-package flymake
+  :ensure nil
+  :commands flymake-mode
+  :custom
+  (flymake-indicator-type 'fringes)
+  :hook
+  (prog-mode . flymake-mode)
+  ;; getting annoyed by all the warnings flymake is generating
+  ;; because of the byte-compiler. so turning it off for peace of mind...
+  (emacs-lisp-mode . (lambda ()
+			 (remove-hook 'flymake-diagnostic-functions #'elisp-flymake-byte-compile t))))
+
+(use-package flymake-ruff
   :ensure t
-  :defer 2)
+  :hook (eglot-managed-mode . flymake-ruff-load))
+
+(use-package dape
+  :ensure t
+  :commands dape)
 
 (use-package sideline-flymake
-  :ensure t
-  :defer 1)
+  :ensure t)
+
+(use-package sideline-eglot
+  :ensure t)
 
 (use-package sideline
   :ensure t
-  :defer 1
   :hook
   (flymake-mode . sideline-mode)
+  (eglot-managed-mode . sideline-mode)
   :init
-  (setq sideline-backends-right '(sideline-flymake))
+  (setq sideline-backends-right '(sideline-flymake
+				  sideline-eglot))
   (setq sideline-order-right 'up
 	sideline-display-backend-name t))
+
+(use-package breadcrumb
+  :ensure t
+  :hook
+  ((emacs-lisp-mode
+    python-ts-mode
+    c-ts-mode
+    c++-ts-mode) . breadcrumb-local-mode))
 
 (use-package blamer
   :ensure t
@@ -965,24 +1010,6 @@ This is done using `cape-capf-super'."
   (blamer-idle-time 0.5)
   (blamer-min-offset 30))
 
-(use-package lsp-pyright
-  :ensure t
-  :after lsp-mode
-  :custom
-  (lsp-pyright-multi-root nil)
-  (lsp-pyright-langserver-command "basedpyright")
-  :hook ((python-ts-mode). (lambda ()
-			     (require 'lsp-pyright))))
-
-(use-package treemacs
-  :ensure t
-  :defer 2
-  :commands treemacs)
-
-(use-package lsp-treemacs
-  :ensure t
-  :defer 2)
-
 (use-package completion-preview
   :ensure nil
   :bind
@@ -990,7 +1017,7 @@ This is done using `cape-capf-super'."
 	("TAB" . nil)
 	("M-i" . nil)
 	("C-<tab>" . completion-preview-insert))
-  :hook ((prog-mode) . completion-preview-mode))
+  :hook (prog-mode . completion-preview-mode))
 
 ;; ============================================================================
 ;;  Treesitter...
@@ -1082,20 +1109,20 @@ this function takes the following as arguments.
   :config
   (set-face-attribute 'dirvish-hl-line nil
 		      :inherit nil)
+  (set-face-attribute 'dired-directory nil
+		      :inherit font-lock-doc-markup-face
+		      :foreground "#FBA0E3")
   (setq dirvish-mode-line-format
 	'(:left (sort symlink) :right (omit yank index)))
   (setq dirvish-attributes
 	'(nerd-icons git-msg file-time file-size collapse subtree-state vc-state))
   (setq delete-by-moving-to-trash t)
   (setq dired-listing-switches
-	"-l --almost-all --human-readable --group-directories-first --no-group"))
-
-(use-package dired+
-  :ensure (:host github :repo "emacsmirror/dired-plus")
-  :hook (dired-mode . (lambda ()
-			(set-face-attribute 'dirvish-file-time nil
-					    :inherit nil
-					    :foreground "#A875FF"))))
+	"-l --almost-all --human-readable --group-directories-first --no-group")
+  :hook
+  (dired-mode . (lambda () (set-face-attribute 'dirvish-file-time nil
+					       :inherit nil
+					       :foreground "#A875FF"))))
 
 (use-package trashed
   :ensure t
@@ -1115,10 +1142,18 @@ this function takes the following as arguments.
   :defer t
   :custom
   (org-directory "~/.emacs.d/Angelique!/org")
-  (org-default-notes-file (convert-standard-filename "~/.emacs.d/Angelique!/org/.notes"))
+  (org-default-notes-file (concat org-directory "/notes.org"))
   (org-babel-load-languages '((emacs-lisp . t) (shell . t)
 			      (C . t) (R . t)
 			      (python . t) (org . t))))
+
+(use-package org-modern
+  :ensure t
+  :hook (org-mode . org-modern-mode))
+
+(use-package org-modern-indent
+  :ensure (:host github :repo "jdtsmith/org-modern-indent")
+  :config (add-hook 'org-mode-hook #'org-modern-indent-mode 90))
 
 (use-package org-roam
   :ensure t
@@ -1127,11 +1162,8 @@ this function takes the following as arguments.
 
 (use-package org-roam-ui
   :ensure t
+  :after org-roam
   :commands org-roam-ui-mode)
-
-(use-package org-modern
-  :ensure t
-  :after org)
 
 ;; ============================================================================
 ;;  Testing bed for functions.
@@ -1149,7 +1181,8 @@ this function takes the following as arguments.
 
 ;; (use-package exwm
 ;;  :ensure t
-;;  :config)
+;;  :config
+;;  (exwm-enable))
 
 ;; ============================================================================
 ;;  Envrc which is evaluated last in this file.
