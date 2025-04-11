@@ -391,17 +391,15 @@ inherit the customisations properly."
   :config
 
   (defun Angelique!--normal-cursor ()
-
     "Cursor indicator for Angelique!"
     (interactive)
     (setq-default cursor-type 'box)
     (set-cursor-color "cyan")
     (set-face-attribute 'line-number-current-line nil
 			:foreground "cyan")
-    (message
-     (propertize
-      "🩵(💠ᴗ͈ˬᴗ͈)🩵* Angelique! navigation deactivated! 🩵(💠ᴗ͈ˬᴗ͈)🩵*"
-      'face `(:foreground "cyan"))))
+    (message (propertize
+	      "🩵(💠ᴗ͈ˬᴗ͈)🩵* Angelique! navigation deactivated! 🩵(💠ᴗ͈ˬᴗ͈)🩵*"
+	      'face `(:foreground "cyan"))))
 
   (defun Angelique!--keybinds ()
     "~Dream the good dream, like a good pretty-princess should!♡(✿ᴗ͈ˬᴗ͈)♡*~."
@@ -410,10 +408,9 @@ inherit the customisations properly."
     (set-cursor-color "#FF83FA")
     (set-face-attribute 'line-number-current-line nil
 			:foreground "#FF83FA")
-    (message
-     (propertize
-      "🩷(🌸ᴗ͈ˬᴗ͈)🩷* Angelique! navigation activated! 🩷(🌸ᴗ͈ˬᴗ͈)🩷*"
-      'face `(:foreground "#FF83FA"))))
+    (message (propertize
+	      "🩷(🌸ᴗ͈ˬᴗ͈)🩷* Angelique! navigation activated! 🩷(🌸ᴗ͈ˬᴗ͈)🩷*"
+	      'face `(:foreground "#FF83FA"))))
 
   (global-set-key
    (kbd "M-i")
@@ -442,13 +439,14 @@ inherit the customisations properly."
      ("f" sp-kill-sexp)
      ("C-d" delete-char)
      ("C-w" kill-region)
-     ("d" delete-region "delete-region" :color blue)
-     ("p" delete-pair "delete-pair" :color blue)
+     ("d" delete-region :color blue)
+     ("p" delete-pair :color blue)
      ;; Set mark.
      ("m" set-mark-command "Set mark")
           ;; Misc
      ("b" switch-to-buffer "switch-to-buffer" :color blue)
-     ("q" dirvish "Dirvish" :color blue)
+     ("Q" delete-window "delete-window" :color blue)
+     ("q" delete-other-windows "delete-other-windows" :color blue)
      ("x" nil "Quit"))))
 
 (use-package pretty-hydra
@@ -472,33 +470,31 @@ inherit the customisations properly."
   :ensure nil
   :config
   ;; https://www.emacswiki.org/emacs/WindowResize
-  ;; Code by Hirose Yuuji and Bob Wiener
+  ;; Code by Hirose Yuuji and Bob Wiener, slightly amended to include
+  ;; multiple digits as prefixes.
   (defun resize-window (&optional arg)
-    "Resize window interactively."
-    (interactive "p")
-    (if (one-window-p) (error "Cannot resize sole window"))
-    (or arg (setq arg 1))
-    (let (c)
-      (catch 'done
-	(while t
-	  (message
-	 "h=heighten, s=shrink, w=widen, n=narrow (by %d);  1-9=unit, q=quit"
-	 arg)
-	  (setq c (read-char))
-	  (condition-case ()
-	    (cond
-	     ((= c ?h) (enlarge-window arg))
-	     ((= c ?s) (shrink-window arg))
-	     ((= c ?w) (enlarge-window-horizontally arg))
-	     ((= c ?n) (shrink-window-horizontally arg))
-	     ((= c ?\^G) (keyboard-quit))
-	     ((= c ?q) (throw 'done t))
-	     ((and (> c ?0) (<= c ?9)) (setq arg (- c ?0)))
-	     (t (beep)))
-	  (error (beep)))))
-      (message "Done.")))
-  ;; TODO: refactor like so? using a defmacro?
-  ;; (enlarge-window (prefix-numeric-value 4))
+  "Resize window interactively."
+  (interactive "P")
+  (if (one-window-p) (error "Cannot resize sole window"))
+  (let ((unit (max 1 (prefix-numeric-value arg)))) ; Handle prefix args
+	(catch 'done
+	  (while t
+            (message (propertize
+                      (format "h=↑, s=↓, w=→, n=← (unit: %d); Type 1-9 to set unit, q=quit" unit)
+                      'face '(:foreground "#FF83FA")))
+            (let ((key (read-key)))
+              (cond
+               ((= key ?h) (enlarge-window unit))
+               ((= key ?s) (shrink-window unit))
+               ((= key ?w) (enlarge-window-horizontally unit))
+               ((= key ?n) (shrink-window-horizontally unit))
+               ((= key ?q) (throw 'done t))
+               ((= key ?\C-g) (keyboard-quit)) ; C-g
+	       ((= key ?\r) (keyboard-quit))
+               ((and (>= key ?1) (<= key ?9)) ; Directly set unit to 1-9
+		(setq unit (- key ?0))) ; Convert ASCII to number
+               (t (beep)))))
+	  (message "Done."))))
   :custom
   (kill-buffer-quit-windows t)
   (even-window-sizes nil)
@@ -520,23 +516,25 @@ inherit the customisations properly."
   :config
   (defhydra Angelique!--window-x-hydra-map (:color red :hint nil)
   "
-^Angelique! Window Control...^                                   _q_: Quit
-^^^^^^^^----------------------------------------------------------------------
+^Angelique! Window Control...^                                                                            _q_: Quit
+^^^^^^^^---------------------------------------------------------------------------------------------------------------
 _n_: rotate-windows
 _e_: rotate-windows-back                     _l_: flip-window-layout-horizontally
-_i_: rotate-window-layout-clockwise          _u_: flip-window-layout-vertically
+_i_: rotate-window-layout-clockwise          _u_: flip-window-layout-vertically             _'_: delete-other-windows
 _o_: rotate-window-layout-anticlockwise      _y_: transpose-window-layout
 
-_;_: resize-window
+_;_: resize-window                           _:_: balance-windows
 "
   ("n" rotate-windows)
-  ("e" rotate-window-sback)
+  ("e" rotate-windows-back)
   ("i" rotate-window-layout-clockwise)
   ("o" rotate-window-layout-anticlockwise)
   ("l" flip-window-layout-horizontally)
   ("u" flip-window-layout-vertically)
   ("y" transpose-window-layout)
   (";" resize-window)
+  (":" balance-windows)
+  ("'" delete-other-windows)
   ("q" nil "Quit"))
   :bind ("M-;" . Angelique!--window-x-hydra-map/body))
 
