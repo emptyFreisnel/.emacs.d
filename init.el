@@ -363,11 +363,14 @@ inherit the customisations properly."
 (use-package avy
   :ensure t
   :defer 2
-  :commands (avy-goto-char-2)
+  :commands (avy-goto-char-2
+	     avy-goto-char-timer)
   :custom
   (avy-keys '(?a ?r ?s ?t ?g ?m ?n ?e ?i))
   (avy-timeout-seconds 0.35)
-  :bind ("M-r" . avy-goto-char-2))
+  :bind
+  ("M-r" . avy-goto-char-2)
+  ("M-R" . avy-goto-char-timer))
 
 (use-package crux
   :ensure t
@@ -452,6 +455,8 @@ inherit the customisations properly."
 (use-package pretty-hydra
   :ensure t)
 
+;; TODO: use a hydra or a transient to do shell commands / compile command.
+
 ;; disabled commands go here...
 (define-key global-map (kbd "C-x m") nil)
 (define-key global-map (kbd "C-x C-l") nil)
@@ -469,32 +474,53 @@ inherit the customisations properly."
 (use-package window ;; window.el
   :ensure nil
   :config
-  ;; https://www.emacswiki.org/emacs/WindowResize
-  ;; Code by Hirose Yuuji and Bob Wiener, slightly amended to include
-  ;; multiple digits as prefixes.
-  (defun resize-window (&optional arg)
-  "Resize window interactively."
-  (interactive "P")
-  (if (one-window-p) (error "Cannot resize sole window"))
-  (let ((unit (max 1 (prefix-numeric-value arg)))) ; Handle prefix args
-	(catch 'done
-	  (while t
-            (message (propertize
-                      (format "h=↑, s=↓, w=→, n=← (unit: %d); Type 1-9 to set unit, q=quit" unit)
-                      'face '(:foreground "#FF83FA")))
-            (let ((key (read-key)))
-              (cond
-               ((= key ?h) (enlarge-window unit))
-               ((= key ?s) (shrink-window unit))
-               ((= key ?w) (enlarge-window-horizontally unit))
-               ((= key ?n) (shrink-window-horizontally unit))
-               ((= key ?q) (throw 'done t))
-               ((= key ?\C-g) (keyboard-quit)) ; C-g
-	       ((= key ?\r) (keyboard-quit))
-               ((and (>= key ?1) (<= key ?9)) ; Directly set unit to 1-9
-		(setq unit (- key ?0))) ; Convert ASCII to number
-               (t (beep)))))
-	  (message "Done."))))
+  ;; Test bed.
+;; set global variables to maintain state
+;; (defvar test-variable 1)
+;; (defvar test-variable2 2)
+
+;; (let* ((prefix (setq test-variable 1))
+;;        (prefix2 (setq test-variable2 2))
+  ;;        (result (string-to-number (concat (number-to-string prefix)
+  ;;                        (number-to-string prefix2)))))
+  ;;   )
+  
+  ;; ;; 1. Define state to hold the multiplier
+  ;; (defvar multiplier 1
+  ;;   "Multiplier for resize operations.")
+  ;; (defvar prefix 1
+  ;;   "The stored prefix.")
+  ;; (defvar prefix-add nil
+  ;;   "The variable to add to the prefix. Default is NIL."
+
+  ;; (defun set-prefix (num)
+  ;;   "Set the prefix to specific NUM."
+  ;;  (setq prefix num)
+  ;;  (message "Set prefix to %d" num)))
+
+  ;; (defun window-resize--resize (fn)
+  ;;  (funcall fn (* (+ prefix prefix-add) multiplier)))
+  
+  ;; ;; 2. Define digit key handling
+  ;; (defun window-resize--set-multiplier (num)
+  ;;   "Set multiplier to NUM (1-9)."
+  ;;   (setq window-resize--multiplier num)
+  ;;   (message "Multiplier set to %d (×10)" num))
+
+  ;; ;; 4. Build transient with dedicated digit keys
+  ;; (transient-define-prefix window-resize-transient ()
+  ;;   "Resize windows with digit-multiplied units."
+  ;;   [["Digits"
+  ;;     ("1" "×10" (lambda () (interactive) (window-resize--set-multiplier 1)))
+  ;;     ("2" "×20" (lambda () (interactive) (window-resize--set-multiplier 2)))
+  ;;     ("3" "×30" (lambda () (interactive) (window-resize--set-multiplier 3)))
+  ;;     ("4" "×40" (lambda () (interactive) (window-resize--set-multiplier 4)))
+  ;;     ("5" "×50" (lambda () (interactive) (window-resize--set-multiplier 5)) :transient t)]
+  ;;    ["Resize"
+  ;;     ("h" "Heighten" (lambda () (interactive) (window-resize--resize #'enlarge-window)))
+  ;;     ("s" "Shrink" (lambda () (interactive) (window-resize--resize #'shrink-window)))
+  ;;     ("w" "Widen" (lambda () (interactive) (window-resize--resize #'enlarge-window-horizontally)))
+  ;;     ("n" "Narrow" (lambda () (interactive) (window-resize--resize #'enlarge-window-horizontally)))]])
   :custom
   (kill-buffer-quit-windows t)
   (even-window-sizes nil)
@@ -514,6 +540,7 @@ inherit the customisations properly."
 (use-package window-x
   :ensure nil
   :config
+  ;; TODO: make this pretty.
   (defhydra Angelique!--window-x-hydra-map (:color red :hint nil)
   "
 ^Angelique! Window Control...^                                                                            _q_: Quit
@@ -532,7 +559,7 @@ _;_: resize-window                           _:_: balance-windows
   ("l" flip-window-layout-horizontally)
   ("u" flip-window-layout-vertically)
   ("y" transpose-window-layout)
-  (";" resize-window)
+  ;; (";" resize-window)
   (":" balance-windows)
   ("'" delete-other-windows)
   ("q" nil "Quit"))
@@ -582,9 +609,6 @@ The DWIM behaviour of this command is as follows:
 ;; ============================================================================
 ;;  Utilities.
 ;; ============================================================================
-
-(use-package repeat
-  :ensure nil)
 
 (use-package compat
   :ensure (:wait t)) ;; otherwise will load before elpaca
@@ -766,14 +790,6 @@ The DWIM behaviour of this command is as follows:
      (remove-hook 'pre-command-hook 'keycast--update)))
   (add-to-list 'global-mode-string '("" keycast-mode-line))
   :hook (elpaca-after-init . keycast-mode))
-
-(use-package eyebrowse
-  :ensure t
-  :custom
-  (eyebrowse-wrap-around t)
-  (eyebrowse-new-workspace "*dashboard*")
-  (eyebrowse-keymap-prefix (kbd "C-x C-n"))
-  :hook (elpaca-after-init . eyebrowse-mode))
 
 (use-package polymode
   :ensure t
