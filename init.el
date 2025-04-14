@@ -220,10 +220,6 @@ If you experience stuttering, increase this.")
     (setq ibuffer-filter-groups (ibuffer-project-generate-filter-groups))
     (unless (eq ibuffer-sorting-mode 'project-file-relative)
       (ibuffer-do-sort-by-project-file-relative)))
-  :bind
-  ;; leaving this for now
-  (:map ibuffer-mode-map
-	("s t" . ibuffer-project-function))
   :hook (ibuffer . ibuffer-project-function))
 
 (use-package nerd-icons-ibuffer
@@ -359,6 +355,11 @@ inherit the customisations properly."
 ;;  Home row keybindings...and packages that assist in moving sentences.
 ;; ============================================================================
 
+(use-package transient
+  :ensure (:wait t) ;; otherwise load before elpaca.
+  :config
+  (require 'transient))
+
 ;; See karthik's post on how to use avy.
 (use-package avy
   :ensure t
@@ -384,10 +385,6 @@ inherit the customisations properly."
   :defer 2
   :config
   (move-text-default-bindings))
-
-(use-package transient
-  :ensure t
-  :defer 2)
 
 (use-package hydra
   :ensure t
@@ -446,14 +443,11 @@ inherit the customisations properly."
      ("p" delete-pair :color blue)
      ;; Set mark.
      ("m" set-mark-command "Set mark")
-          ;; Misc
+     ;; Misc
      ("b" switch-to-buffer "switch-to-buffer" :color blue)
-     ("Q" delete-window "delete-window" :color blue)
-     ("q" delete-other-windows "delete-other-windows" :color blue)
+     ("q" delete-window "delete-window" :color blue)
+     ("Q" delete-other-windows "delete-other-windows" :color blue)
      ("x" nil "Quit"))))
-
-(use-package pretty-hydra
-  :ensure t)
 
 ;; TODO: use a hydra or a transient to do shell commands / compile command.
 
@@ -464,7 +458,7 @@ inherit the customisations properly."
 
 ;; ============================================================================
 ;;  Prevent the cursor from going into the minibuffer prompt.
-;;  Also set to have Emacs handle windows better.
+;;  Also custom functions set to have Emacs handle windows better.
 ;; ============================================================================
 
 (customize-set-variable 'minibuffer-prompt-properties
@@ -474,53 +468,55 @@ inherit the customisations properly."
 (use-package window ;; window.el
   :ensure nil
   :config
-  ;; Test bed.
-;; set global variables to maintain state
-;; (defvar test-variable 1)
-;; (defvar test-variable2 2)
+  (defvar base-number 1
+    "Number for basic window resizing operations.")
+  (defvar precision-number 1
+    "A more precise number for fine-grained window-resizing.")
 
-;; (let* ((prefix (setq test-variable 1))
-;;        (prefix2 (setq test-variable2 2))
-  ;;        (result (string-to-number (concat (number-to-string prefix)
-  ;;                        (number-to-string prefix2)))))
-  ;;   )
-  
-  ;; ;; 1. Define state to hold the multiplier
-  ;; (defvar multiplier 1
-  ;;   "Multiplier for resize operations.")
-  ;; (defvar prefix 1
-  ;;   "The stored prefix.")
-  ;; (defvar prefix-add nil
-  ;;   "The variable to add to the prefix. Default is NIL."
+  (defun set-base-number (arg)
+    "Set base-multiplier to ARG."
+    (interactive "nEnter base multiplier: ")
+    (setq base-number (max 1 arg)))
 
-  ;; (defun set-prefix (num)
-  ;;   "Set the prefix to specific NUM."
-  ;;  (setq prefix num)
-  ;;  (message "Set prefix to %d" num)))
+  (defun set-precision-number (arg)
+    "Set precision-multiplier to ARG."
+    (interactive "nEnter precision multiplier: ")
+    (setq precision-number (max 1 arg)))
 
-  ;; (defun window-resize--resize (fn)
-  ;;  (funcall fn (* (+ prefix prefix-add) multiplier)))
-  
-  ;; ;; 2. Define digit key handling
-  ;; (defun window-resize--set-multiplier (num)
-  ;;   "Set multiplier to NUM (1-9)."
-  ;;   (setq window-resize--multiplier num)
-  ;;   (message "Multiplier set to %d (×10)" num))
+  (defun Angelique!--enlarge-window ()
+    "Resize window height using multipliers."
+    (interactive)
+    (enlarge-window (* base-number
+		       precision-number)))
 
-  ;; ;; 4. Build transient with dedicated digit keys
-  ;; (transient-define-prefix window-resize-transient ()
-  ;;   "Resize windows with digit-multiplied units."
-  ;;   [["Digits"
-  ;;     ("1" "×10" (lambda () (interactive) (window-resize--set-multiplier 1)))
-  ;;     ("2" "×20" (lambda () (interactive) (window-resize--set-multiplier 2)))
-  ;;     ("3" "×30" (lambda () (interactive) (window-resize--set-multiplier 3)))
-  ;;     ("4" "×40" (lambda () (interactive) (window-resize--set-multiplier 4)))
-  ;;     ("5" "×50" (lambda () (interactive) (window-resize--set-multiplier 5)) :transient t)]
-  ;;    ["Resize"
-  ;;     ("h" "Heighten" (lambda () (interactive) (window-resize--resize #'enlarge-window)))
-  ;;     ("s" "Shrink" (lambda () (interactive) (window-resize--resize #'shrink-window)))
-  ;;     ("w" "Widen" (lambda () (interactive) (window-resize--resize #'enlarge-window-horizontally)))
-  ;;     ("n" "Narrow" (lambda () (interactive) (window-resize--resize #'enlarge-window-horizontally)))]])
+  (defun Angelique!--enlarge-window-horizontally ()
+    "Resize window height using multipliers."
+    (interactive)
+    (enlarge-window-horizontally (* base-number
+				    precision-number)))
+
+  (defun Angelique!--shrink-window ()
+    "Resize window height using multipliers."
+    (interactive)
+    (shrink-window (* base-number
+		      precision-number)))
+
+  (defun Angelique!--shrink-window-horizontally ()
+    "Resize window height using multipliers."
+    (interactive)
+    (shrink-window-horizontally (* base-number
+				   precision-number)))
+
+  (transient-define-prefix Angelique!--window-resize-transient ()
+    "Resize windows with digit-multiplied units."
+    [["Parameters"
+      ("u" "set-base-number" set-base-number :transient t)
+      ("y" "set-precision-number" set-precision-number :transient t)]
+     ["Resize"
+      ("n" "Widen" Angelique!--enlarge-window-horizontally :transient t)
+      ("e" "Heighten" Angelique!--enlarge-window :transient t)
+      ("i" "Shrink" Angelique!--shrink-window :transient t)
+      ("o" "Narrow" Angelique!--shrink-window-horizontally :transient t)]])
   :custom
   (kill-buffer-quit-windows t)
   (even-window-sizes nil)
@@ -540,30 +536,21 @@ inherit the customisations properly."
 (use-package window-x
   :ensure nil
   :config
-  ;; TODO: make this pretty.
-  (defhydra Angelique!--window-x-hydra-map (:color red :hint nil)
-  "
-^Angelique! Window Control...^                                                                            _q_: Quit
-^^^^^^^^---------------------------------------------------------------------------------------------------------------
-_n_: rotate-windows
-_e_: rotate-windows-back                     _l_: flip-window-layout-horizontally
-_i_: rotate-window-layout-clockwise          _u_: flip-window-layout-vertically             _'_: delete-other-windows
-_o_: rotate-window-layout-anticlockwise      _y_: transpose-window-layout
-
-_;_: resize-window                           _:_: balance-windows
-"
-  ("n" rotate-windows)
-  ("e" rotate-windows-back)
-  ("i" rotate-window-layout-clockwise)
-  ("o" rotate-window-layout-anticlockwise)
-  ("l" flip-window-layout-horizontally)
-  ("u" flip-window-layout-vertically)
-  ("y" transpose-window-layout)
-  ;; (";" resize-window)
-  (":" balance-windows)
-  ("'" delete-other-windows)
-  ("q" nil "Quit"))
-  :bind ("M-;" . Angelique!--window-x-hydra-map/body))
+  (transient-define-prefix Angelique!--window-control! ()
+    "A cuter and better window control <3"
+    [["Rotate"
+      ("n" "rotate-windows" rotate-windows :transient t)
+      ("e" "rotate-windows-back" rotate-windows-back :transient t)
+      ("i" "rotate-window-layout-clockwise" rotate-window-layout-clockwise :transient t)
+      ("o" "rotate-window-layout-counterclockwise" rotate-window-layout-counterclockwise :transient t)]
+     ["Flip & Transpose"
+      ("l" "flip-window-layout-horizontally" flip-window-layout-horizontally :transient t)
+      ("u" "flip-window-layout-vertically" flip-window-layout-vertically :transient t)
+      ("y" "transpose-window-layout" transpose-window-layout :transient t)]
+     ["Resize & Balance"
+      (";" "resize-windows" Angelique!--window-resize-transient :transient t)
+      (":" "balance-windows" balance-windows :transient t)]])
+  :bind ("M-;" . Angelique!--window-control!))
 
 (use-package ace-window
   :ensure t
@@ -609,9 +596,6 @@ The DWIM behaviour of this command is as follows:
 ;; ============================================================================
 ;;  Utilities.
 ;; ============================================================================
-
-(use-package compat
-  :ensure (:wait t)) ;; otherwise will load before elpaca
 
 (use-package tab-bar
   :ensure nil
@@ -1182,6 +1166,13 @@ this function takes the following as arguments.
   :commands org-roam-ui-mode)
 
 ;; ============================================================================
+;;  Other programming modes here...
+;; ============================================================================
+
+(use-package ess
+  :ensure t)
+
+;; ============================================================================
 ;;  Testing bed for functions.
 ;;  TODO: to have my own functions in a package for optimisation.
 ;; ============================================================================
@@ -1209,7 +1200,7 @@ this function takes the following as arguments.
   :commands envrc-global-mode
   :hook (elpaca-after-init . (lambda ()
 			       (when (executable-find "direnv")
-				 (envrc-global-mode 1)))))
+				 (envrc-global-mode)))))
 
 (provide 'init)
 
