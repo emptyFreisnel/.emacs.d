@@ -110,6 +110,7 @@ If you experience stuttering, increase this.")
   (push "init.el" compile-angel-excluded-files)
   (push "early-init.el" compile-angel-excluded-files)
   (push "Angelique!.el" compile-angel-excluded-files)
+  (push "~/.emacs.d/var/recentf-save.el" compile-angel-excluded-files)
   (compile-angel-on-load-mode)
   (add-hook 'emacs-lisp-mode-hook #'compile-angel-on-save-local-mode))
 
@@ -331,14 +332,11 @@ inherit the customisations properly."
 ;; ============================================================================
 ;;  Setting up Angelique! folder for my own custom
 ;;  functions and perhaps my own little packages.
+;;  Some customisations that did not thematically fit go here for now.
 ;; ============================================================================
 
 ;; not using customize feature.
 (setq custom-file null-device)
-
-;; tell emacs to refresh buffers
-;; when files are changed on disk.
-(global-auto-revert-mode)
 
 ;; easier pop from C-u C-SPC
 (setq set-mark-command-repeat-pop t)
@@ -348,8 +346,12 @@ inherit the customisations properly."
   (server-start))
 
 (defvar Angelique! (expand-file-name "Angelique!/" user-emacs-directory))
-(unless (file-exists-p Angelique!)
+(defvar 庭園の王女 (expand-file-name "庭園の王女/" Angelique!))
+
+(unless (file-directory-p Angelique!)
   (make-directory Angelique! t))
+(unless (file-directory-p 庭園の王女)
+  (make-directory 庭園の王女 t))
 
 ;; ============================================================================
 ;;  Home row keybindings...and packages that assist in moving sentences.
@@ -432,6 +434,8 @@ inherit the customisations properly."
      ("M-e" forward-sentence)
      ("M-o" right-word)
      ("M-n" left-word)
+     ("M-u" sp-backward-symbol)
+     ("M-y" sp-forward-symbol)
      ("C-M-n" backward-sexp)
      ("C-M-o" forward-sexp)
      ;; More easy to reach keys for yank/kill
@@ -442,11 +446,11 @@ inherit the customisations properly."
      ("d" delete-region :color blue)
      ("p" delete-pair :color blue)
      ;; Set mark.
-     ("m" set-mark-command "Set mark")
+     ("m" set-mark-command "Mark")
+     ;; Pop to mark.
+     ("M" pop-to-mark-command "Pop-to-mark")
      ;; Misc
      ("b" switch-to-buffer "switch-to-buffer" :color blue)
-     ("q" delete-window "delete-window" :color blue)
-     ("Q" delete-other-windows "delete-other-windows" :color blue)
      ("x" nil "Quit"))))
 
 ;; TODO: use a hydra or a transient to do shell commands / compile command.
@@ -454,7 +458,38 @@ inherit the customisations properly."
 ;; disabled commands go here...
 (define-key global-map (kbd "C-x m") nil)
 (define-key global-map (kbd "C-x C-l") nil)
+(define-key global-map (kbd "C-x C-n") nil)
 (define-key global-map (kbd "C-x n n") nil)
+
+;; ============================================================================
+;;  Buffer toggle.
+;;  https://www.reddit.com/r/emacs/comments/l4v1ux/one_of_the_most_useful_small_lisp_functions_in_my/
+;; ============================================================================
+
+(defun Angelique!--toggle-or-create (buffer-name buffer-create-fn &optional switch-cont)
+  "Makes a toggle-function to have raise-or-create behaviour.
+
+  Creates a toggle-function that executes BUFFER-CREATE-FN if a
+  buffer named BUFFER-NAME doesn't exist, switches to the buffer
+  named BUFFER-NAME if it exists, and switches to the previous
+  buffer if we are currently visiting buffer BUFFER-NAME.
+
+  The SWITCH-CONT argument is a function which, if given, is called
+  after the buffer has been created or switched to.  This allows
+  running further actions that setup the state of the buffer or
+  modify it."
+  (interactive)
+  (let ((target-buf (get-buffer buffer-name)))
+    (prin1 target-buf)
+    (cond
+     ((equal (current-buffer) target-buf)
+      (switch-to-buffer nil))
+     (target-buf
+      (switch-to-buffer target-buf)
+      (if switch-cont (funcall switch-cont)))
+     (t
+      (funcall buffer-create-fn)
+      (if switch-cont (funcall switch-cont))))))
 
 ;; ============================================================================
 ;;  Prevent the cursor from going into the minibuffer prompt.
@@ -508,22 +543,28 @@ inherit the customisations properly."
 				   precision-number)))
 
   (transient-define-prefix Angelique!--window-resize-transient ()
-    "Resize windows with digit-multiplied units."
-    [["Parameters"
-      ("u" "set-base-number" set-base-number :transient t)
-      ("y" "set-precision-number" set-precision-number :transient t)]
+    "Transient layout for minute resizing of windows.
+This is preferably activated through Angelique!--window-control!"
+    ;; this is to prevent transient from exiting after command input.
+    :transient-suffix 'transient--do-stay
+    ["Resize windows..."
+     ["Parameters"
+      ("u" "set-base-number" set-base-number)
+      ("y" "set-precision-number" set-precision-number)]
      ["Resize"
-      ("n" "Widen" Angelique!--enlarge-window-horizontally :transient t)
-      ("e" "Heighten" Angelique!--enlarge-window :transient t)
-      ("i" "Shrink" Angelique!--shrink-window :transient t)
-      ("o" "Narrow" Angelique!--shrink-window-horizontally :transient t)]])
+      ("n" "Widen" Angelique!--enlarge-window-horizontally)
+      ("e" "Heighten" Angelique!--enlarge-window)
+      ("i" "Shrink" Angelique!--shrink-window)
+      ("o" "Narrow" Angelique!--shrink-window-horizontally)]])
   :custom
   (kill-buffer-quit-windows t)
   (even-window-sizes nil)
   (display-buffer-alist
-   '(("\\`\\*\\(Help\\|helpful .*\\|Apropos\\|Occur\\)\\*\\'"
+   '(("\\`\\*\\(Help\\|helpful .*\\|Apropos\\|Occur\\|Org.*\\)\\*\\'"
       (display-buffer-at-bottom)
-      (window-height . 0.3))
+      (window-height . 0.35))
+     ("\\*Async Shell Command\\*"
+      (display-buffer-no-window))
      ("\\*Embark Collect: .*\\*"
       (display-buffer-at-bottom)
       (window-height . 0.3))
@@ -537,19 +578,33 @@ inherit the customisations properly."
   :ensure nil
   :config
   (transient-define-prefix Angelique!--window-control! ()
-    "A cuter and better window control <3"
-    [["Rotate"
-      ("n" "rotate-windows" rotate-windows :transient t)
-      ("e" "rotate-windows-back" rotate-windows-back :transient t)
-      ("i" "rotate-window-layout-clockwise" rotate-window-layout-clockwise :transient t)
-      ("o" "rotate-window-layout-counterclockwise" rotate-window-layout-counterclockwise :transient t)]
+    "A better interface for window resizing and layout control."
+    ;; this is to prevent transient from exiting after command input.
+    :transient-suffix 'transient--do-stay
+    ["Angelique! window control..."
+     ["Rotate"
+      ("n" "rotate-windows" rotate-windows)
+      ("e" "rotate-windows-back" rotate-windows-back)
+      ("i" "rotate-window-layout-clockwise" rotate-window-layout-clockwise)
+      ("o" "rotate-window-layout-counterclockwise" rotate-window-layout-counterclockwise)]
      ["Flip & Transpose"
-      ("l" "flip-window-layout-horizontally" flip-window-layout-horizontally :transient t)
-      ("u" "flip-window-layout-vertically" flip-window-layout-vertically :transient t)
-      ("y" "transpose-window-layout" transpose-window-layout :transient t)]
+      ("l" "flip-window-layout-horizontally" flip-window-layout-horizontally)
+      ("u" "flip-window-layout-vertically" flip-window-layout-vertically)
+      ("y" "transpose-window-layout" transpose-window-layout)]
+     ["Splitting & Closing"
+      ("s" "split-window-right" split-window-right)
+      ("S" "split-window-below" split-window-below)
+      ("d" "delete-window" delete-window :transient nil)
+      ("D" "kill-buffer-and-window" kill-buffer-and-window :transient nil)]
+     ["Movement"
+      ("M-o" "ace-window" ace-window)]
+     ["Tabs"
+      ("t" "tab-new" tab-new :transient nil)
+      ("T" "tab-close" tab-close)
+      ("O" "open-buffer-in-new-tab" Angelique!--open-buffer-in-new-tab)]
      ["Resize & Balance"
-      (";" "resize-windows" Angelique!--window-resize-transient :transient t)
-      (":" "balance-windows" balance-windows :transient t)]])
+      (";" "resize-windows" Angelique!--window-resize-transient)
+      (":" "balance-windows" balance-windows)]])
   :bind ("M-;" . Angelique!--window-control!))
 
 (use-package ace-window
@@ -599,6 +654,18 @@ The DWIM behaviour of this command is as follows:
 
 (use-package tab-bar
   :ensure nil
+  :config
+  (set-face-attribute 'tab-bar-tab-highlight nil
+		      :background "#DF85FF")
+  :init
+  (defun Angelique!--open-buffer-in-new-tab ()
+    "Return a newly created tab displaying the current buffer.
+The previous window that displays that particular buffer is then deleted."
+    (interactive)
+    (let ((cbuffer (current-buffer)))
+      (delete-window)
+      (tab-bar-new-tab-to)
+      (switch-to-buffer cbuffer)))
   :custom
   (tab-bar-new-tab-choice "*dashboard*")
   :hook (elpaca-after-init . tab-bar-mode))
@@ -658,10 +725,6 @@ The DWIM behaviour of this command is as follows:
   (setq symbol-overlay-idle-time 0.25)
   :hook ((prog-mode) . symbol-overlay-mode))
 
-(use-package browser-hist
-  :ensure t
-  :commands browser-hist)
-
 (use-package embark
   :ensure t
   :bind (("C-;" . embark-act)
@@ -720,6 +783,10 @@ The DWIM behaviour of this command is as follows:
   :ensure t
   :defer 2)
 
+(use-package webjump
+  :ensure nil
+  :bind ("M-s M-e" . webjump))
+
 (use-package consult
   :ensure t
   :bind (;; A recursive grep
@@ -729,21 +796,6 @@ The DWIM behaviour of this command is as follows:
 	 ("M-s M-o" . consult-outline)
 	 ("M-s M-l" . consult-line)
 	 ("M-s M-b" . consult-buffer)))
-
-;;; See Sacha Chua's articles on consult-omni.
-(use-package consult-omni
-  :ensure  (:host github
-		  :repo "armindarvish/consult-omni"
-		  :branch "main"
-		  :files (:defaults "sources/*.el"))
-  :bind
-  ("M-s M-s" . consult-omni)
-  ("M-s M-e" . consult-omni-external-search)
-  ("M-s a" . consult-omni-apps)
-  :config
-  (require 'consult-omni-sources)
-  (require 'consult-omni-embark)
-  (consult-omni-sources-load-modules))
 
 (use-package consult-eglot
   :ensure (:host github
@@ -836,9 +888,18 @@ The DWIM behaviour of this command is as follows:
 (use-package recentf
   :ensure nil
   :bind ("C-x C-r" . recentf)
-  :custom
-  (recentf-max-saved-items 50)
-  :config (recentf-mode 1))
+  :config
+  (add-to-list 'recentf-exclude
+	       (recentf-expand-file-name no-littering-var-directory))
+  (add-to-list 'recentf-exclude
+	       (recentf-expand-file-name no-littering-etc-directory))
+  :init
+  (setq recentf-max-menu-items 25)
+  (setq recentf-max-saved-items 25)
+  (recentf-mode)
+  :hook
+  (kill-emacs . recentf-save-list)
+  (save-buffers-kill-terminal . recentf-save-list))
 
 (use-package savehist
   :ensure nil
@@ -972,7 +1033,9 @@ This is done using `cape-capf-super'."
 
 (use-package dape
   :ensure t
-  :commands dape)
+  :commands dape
+  :config
+  (dape-breakpoint-global-mode))
 
 (use-package sideline-flymake
   :ensure t)
@@ -1140,30 +1203,104 @@ this function takes the following as arguments.
 (use-package org
   :ensure t
   :defer t
+  :config
+  (set-face-attribute 'org-document-title nil
+		      :family "VictorMono Nerd Font Mono"
+		      :weight 'bold
+		      :slant 'italic
+		      :foreground "#FBA0E3")
+  (set-face-attribute 'org-level-1 nil
+		      :family "VictorMono Nerd Font Mono"
+		      :weight 'bold
+		      :slant 'italic
+		      :foreground "cyan"
+		      :height 133)
+
+  (defun Angelique!--show-intro-for-garden ()
+    "Reveal intro section in my garden org file."
+    (interactive)
+    (when (and (derived-mode-p 'org-mode)
+	       buffer-file-name
+	       (string-match-p ".*org\\'" buffer-file-name))
+      (run-at-time "0.01 sec" nil
+		   (lambda () (save-excursion
+				(goto-char (point-min))
+				(when (re-search-forward "^\\*")
+				  (org-cycle)
+				  (org-cycle)))))))
   :custom
-  (org-directory "~/.emacs.d/Angelique!/org")
+  (org-startup-indented t)
+  (org-pretty-entities t)
+  (org-hide-emphasis-markers t)
+  (org-hide-macro-markers t)
+  (org-directory "~/.emacs.d/Angelique!/庭園の王女/")
   (org-default-notes-file (concat org-directory "/notes.org"))
-  (org-babel-load-languages '((emacs-lisp . t) (shell . t)
-			      (C . t) (R . t)
-			      (python . t) (org . t))))
+  
+  (org-babel-load-languages
+   '((emacs-lisp . t)
+     (shell . t)
+     (C . t)
+     (R . t)
+     (python . t)
+     (org . t)))
+
+  (org-structure-template-alist
+   '(("a" . "export ascii")
+     ("e" . "example")
+     ("E" . "export")
+     ("m" . "export md")
+     ("h" . "export html")
+     ("L" . "export latex")
+     ("l" . "src emacs-lisp")
+     ("p" . "src python")
+     ("c" . "src C")
+     ("s" . "src")
+     ("S" . "src sh")
+     ("n" . "notes")
+     ("q" . "quote")
+     ("u" . "update")
+     ("v" . "verse")))
+  :hook
+  (org-mode . Angelique!--show-intro-for-garden))
 
 (use-package org-modern
-  :ensure t
-  :hook (org-mode . org-modern-mode))
-
-(use-package org-modern-indent
-  :ensure (:host github :repo "jdtsmith/org-modern-indent")
-  :config (add-hook 'org-mode-hook #'org-modern-indent-mode 90))
+  :ensure (:host github :repo "minad/org-modern")
+  :custom
+  ;; to enable org-modern-indent when org-indent is active.
+  (org-modern-block-indent t)
+  (org-modern-star 'replace)
+  :hook
+  (org-mode . org-modern-mode)
+  (org-mode . org-indent-mode))
 
 (use-package org-roam
   :ensure t
   :after org
-  :commands org-roam-mode)
+  :custom
+  (org-roam-directory (file-truename "~/.emacs.d/Angelique!/庭園の王女/"))
+  (org-roam-extract-new-file-path "${slug}.org")
+  (org-roam-capture-templates '(("d" "default" plain "%?"
+				 :target
+				 (file+head "${slug}.org"
+					    "#+TITLE: ${title}\n#+AUTHOR:\n#+DATE:\n")
+				 :unnarrowed t))))
 
 (use-package org-roam-ui
   :ensure t
   :after org-roam
   :commands org-roam-ui-mode)
+
+(use-package org-ql
+  :ensure t
+  :after org)
+
+(use-package org-appear
+  :ensure t
+  :after org
+  :custom
+  (org-appear-trigger 'on-change)
+  :hook
+  (org-mode . org-appear-mode))
 
 ;; ============================================================================
 ;;  Other programming modes here...

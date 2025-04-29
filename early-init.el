@@ -14,6 +14,7 @@
 
 ;; ============================================================================
 ;;  Optimizations
+;;  Most of it is found in Doom Emacs's configuration.
 ;; ============================================================================
 
 (global-so-long-mode 1)
@@ -23,7 +24,12 @@
 (setq-default bidi-display-reordering 'left-to-right
 	      bidi-paragraph-direction 'left-to-right)
 
+(setq auto-mode-case-fold nil)
+
 (setq-default cursor-in-non-selected-windows nil)
+
+(setq redisplay-skip-fontification-on-input t)
+
 (setq highlight-nonselected-windows nil)
 
 (setq bidi-inhibit-bpa t)
@@ -42,8 +48,6 @@
 (setq gc-cons-threshold 134217728) ;; 128MB
 
 (setq read-process-output-max (* 1024 1024))
-(setq lsp-log-io nil)
-(setenv "LSP_USE_PLISTS" "true")
 
 ;; ============================================================================
 ;;  Basic augumenations
