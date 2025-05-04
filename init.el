@@ -341,6 +341,9 @@ inherit the customisations properly."
 ;; easier pop from C-u C-SPC
 (setq set-mark-command-repeat-pop t)
 
+;; shift-select-mode set to permanent
+(setq shift-select-mode 'permanent)
+
 (require 'server)
 (unless (server-running-p)
   (server-start))
@@ -455,10 +458,12 @@ inherit the customisations properly."
 
 ;; TODO: use a hydra or a transient to do shell commands / compile command.
 
+;; additional defined keys here...
+(define-key global-map (kbd "C-M-c") 'treesit-up-list)
+(define-key global-map (kbd "C-M-d") 'treesit-down-list)
+
 ;; disabled commands go here...
 (define-key global-map (kbd "C-x m") nil)
-(define-key global-map (kbd "C-x C-l") nil)
-(define-key global-map (kbd "C-x C-n") nil)
 (define-key global-map (kbd "C-x n n") nil)
 
 ;; ============================================================================
@@ -592,8 +597,8 @@ This is preferably activated through Angelique!--window-control!"
       ("u" "flip-window-layout-vertically" flip-window-layout-vertically)
       ("y" "transpose-window-layout" transpose-window-layout)]
      ["Splitting & Closing"
-      ("s" "split-window-right" split-window-right)
-      ("S" "split-window-below" split-window-below)
+      ("s" "split-window-right" split-window-right :transient nil)
+      ("S" "split-window-below" split-window-below :transient nil)
       ("d" "delete-window" delete-window :transient nil)
       ("D" "kill-buffer-and-window" kill-buffer-and-window :transient nil)]
      ["Movement"
@@ -834,6 +839,14 @@ The previous window that displays that particular buffer is then deleted."
 (use-package emms
   :ensure t
   :defer 2)
+
+(use-package expand-region
+  :ensure t
+  :bind ("C-x C-n" . er/expand-region))
+
+(use-package multiple-cursors
+  :ensure t
+  :bind ("C-x C-l" . mc/edit-lines))
 
 ;; ============================================================================
 ;;  Better help functionality for emacs.
@@ -1221,13 +1234,38 @@ this function takes the following as arguments.
     (interactive)
     (when (and (derived-mode-p 'org-mode)
 	       buffer-file-name
-	       (string-match-p ".*org\\'" buffer-file-name))
+	       (not (string-match-p ".*庭園の王女\\.org\\'" buffer-file-name)))
       (run-at-time "0.01 sec" nil
 		   (lambda () (save-excursion
 				(goto-char (point-min))
-				(when (re-search-forward "^\\*")
+				(when (re-search-forward "^\\*" nil t)
 				  (org-cycle)
 				  (org-cycle)))))))
+  (transient-define-prefix Angelique!--org-navigation ()
+    "Transient layout for easier Org navigation."
+    ["Angelique! Org-navigation..."
+     ["Org-roam"
+      ("a" "org-roam-node-find" org-roam-node-find)
+      ("r" "org-roam-node-insert" org-roam-node-insert)
+      ("s" "org-roam-buffer-toggle" org-roam-buffer-toggle)
+      ("t" "org-roam-ui-open" org-roam-ui-open)
+      ("g" "org-roam-db-sync" org-roam-db-sync)]
+     ["Babel"
+      ("e" "org-babel-tangle" org-babel-tangle)
+      ("i" "org-insert-block-template" org-insert-block-template)
+      ("d" "org-babel-demarcate-block" org-babel-demarcate-block)]
+     ["Search & Link"
+      ("q" "org-ql-search" org-ql-search)
+      ("f" "org-ql-find" org-ql-find)
+      ("l" "org-store-link" org-store-link)
+      ("L" "org-insert-last-stored-link" org-insert-last-stored-link)]
+     ["Restart"
+      ("x" "Restart" org-mode-restart :transient t)]])
+  :bind
+  (("C-c o" . Angelique!--org-navigation)
+   :map org-mode-map
+   ;; remove org-deadline as binding...
+   ("C-c C-d" . nil))
   :custom
   (org-startup-indented t)
   (org-pretty-entities t)
@@ -1260,6 +1298,13 @@ this function takes the following as arguments.
      ("q" . "quote")
      ("u" . "update")
      ("v" . "verse")))
+
+  (org-todo-keywords
+   '((sequence
+      "TODO"
+      "DONE"
+      "ONGOING"
+      "SOMEDAY")))
   :hook
   (org-mode . Angelique!--show-intro-for-garden))
 
