@@ -168,7 +168,8 @@ If you experience stuttering, increase this.")
 (use-package colorful-mode
   :ensure t
   :defer 1
-  :hook ((prog-mode) . colorful-mode))
+  :hook ((prog-mode
+	  org-mode) . colorful-mode))
 
 ;; ============================================================================
 ;;  Ibuffer customizations.
@@ -269,7 +270,10 @@ If you experience stuttering, increase this.")
   (dashboard-remove-missing-entry)
   :config
   (set-face-attribute 'dashboard-banner-logo-title nil
-		      :foreground "#EEAEEE")
+		      :family "VictorMono Nerd Font Mono"
+		      :slant 'italic
+		      :foreground "#DF85FF"
+		      :height 120)
   (set-face-attribute 'dashboard-items-face nil
 		      :foreground "#A875FF")
   (setq initial-buffer-choice (lambda ()
@@ -291,6 +295,7 @@ If you experience stuttering, increase this.")
 ;; https://www.gnu.org/software/emacs/manual/html_node/emacs/Fonts.html
 
 ;; (add-to-list 'default-frame-alist '(font . "JetBrains Mono Nerd Font 12"))
+;; (add-to-list 'default-frame-alist '(font . "CaskaydiaMono Nerd Font Mono 12"))
 
 (add-to-list 'default-frame-alist '(font . "FiraCode Nerd Font Propo 11"))
 (add-to-list 'default-frame-alist '(cursor-color ."cyan"))
@@ -343,6 +348,9 @@ inherit the customisations properly."
 
 ;; shift-select-mode set to permanent
 (setq shift-select-mode 'permanent)
+
+;; No need for ~ files when editing
+(setq-default create-lockfiles nil)
 
 (require 'server)
 (unless (server-running-p)
@@ -417,8 +425,7 @@ inherit the customisations properly."
 	      "🩷(🌸ᴗ͈ˬᴗ͈)🩷* Angelique! navigation activated! 🩷(🌸ᴗ͈ˬᴗ͈)🩷*"
 	      'face `(:foreground "#FF83FA"))))
 
-  (global-set-key
-   (kbd "M-i")
+  (global-set-key (kbd "M-i")
    (defhydra Angelique!--hydra-map
      (:pre Angelique!--keybinds :post Angelique!--normal-cursor :color red)
      ;; Normal navigation.
@@ -453,10 +460,19 @@ inherit the customisations properly."
      ;; Pop to mark.
      ("M" pop-to-mark-command "Pop-to-mark")
      ;; Misc
-     ("b" switch-to-buffer "switch-to-buffer" :color blue)
      ("x" nil "Quit"))))
 
-;; TODO: use a hydra or a transient to do shell commands / compile command.
+(transient-define-prefix Angelique!--shell-commands ()
+  "Transient layout for shell-commands."
+  ["Angelique! shell-commands..."
+   ["Shell & Compile"
+    ("v" "vterm" vterm)
+    ("V" "vterm-other-window" vterm-other-window)
+    ("s" "async-shell-command" async-shell-command)
+    ("S" "shell-command" shell-command)
+    ("c" "compile" compile)]])
+
+(define-key global-map (kbd "C-c s") 'Angelique!--shell-commands)
 
 ;; additional defined keys here...
 (define-key global-map (kbd "C-M-c") 'treesit-up-list)
@@ -590,23 +606,28 @@ This is preferably activated through Angelique!--window-control!"
      ["Rotate"
       ("n" "rotate-windows" rotate-windows)
       ("e" "rotate-windows-back" rotate-windows-back)
-      ("i" "rotate-window-layout-clockwise" rotate-window-layout-clockwise)
-      ("o" "rotate-window-layout-counterclockwise" rotate-window-layout-counterclockwise)]
+      ("i" "window-layout-rotate-clockwise" window-layout-rotate-clockwise)
+      ("o" "window-layout-rotate-anticlockwise" window-layout-rotate-anticlockwise)]
      ["Flip & Transpose"
-      ("l" "flip-window-layout-horizontally" flip-window-layout-horizontally)
-      ("u" "flip-window-layout-vertically" flip-window-layout-vertically)
-      ("y" "transpose-window-layout" transpose-window-layout)]
+      ("l" "window-layout-flip-leftright" window-layout-flip-leftright)
+      ("u" "window-layout-flip-topdown" window-layout-flip-topdown)
+      ("y" "window-layout-transpose" window-layout-transpose)]
      ["Splitting & Closing"
       ("s" "split-window-right" split-window-right :transient nil)
       ("S" "split-window-below" split-window-below :transient nil)
       ("d" "delete-window" delete-window :transient nil)
       ("D" "kill-buffer-and-window" kill-buffer-and-window :transient nil)]
      ["Movement"
-      ("M-o" "ace-window" ace-window)]
+      ("M-o" "ace-window" ace-window)
+      ("b" "switch-to-buffer" switch-to-buffer :transient nil)]
      ["Tabs"
       ("t" "tab-new" tab-new :transient nil)
-      ("T" "tab-close" tab-close)
-      ("O" "open-buffer-in-new-tab" Angelique!--open-buffer-in-new-tab)]
+      ("T" "tab-close" tab-close :transient nil)
+      ("h" "tab-next" tab-next)
+      ("H" "tab-bar-switch-to-prev-tab" tab-bar-switch-to-prev-tab)
+      ("k" "tab-bar-switch-to-tab" tab-bar-switch-to-tab :transient nil)
+      ("r" "tab-bar-switch-to-recent-tab" tab-bar-switch-to-recent-tab :transient nil)
+      ("O" "open-buffer-in-new-tab" Angelique!--open-buffer-in-new-tab :transient nil)]
      ["Resize & Balance"
       (";" "resize-windows" Angelique!--window-resize-transient)
       (":" "balance-windows" balance-windows)]])
@@ -657,11 +678,32 @@ The DWIM behaviour of this command is as follows:
 ;;  Utilities.
 ;; ============================================================================
 
+(use-package time
+  :ensure nil
+  :config
+  (display-time-mode 1))
+
 (use-package tab-bar
   :ensure nil
   :config
   (set-face-attribute 'tab-bar-tab-highlight nil
-		      :background "#DF85FF")
+		      :background "#F4B6FF")
+
+  (set-face-attribute 'tab-bar-tab nil
+		      :family "VictorMono Nerd Font Mono"
+		      :slant 'italic
+		      :background "#0c0a20"
+		      :foreground "#DF85FF"
+		      :height 95)
+  
+  (set-face-attribute 'tab-bar-tab-inactive nil
+		      :family "VictorMono Nerd Font Mono"
+		      :slant 'italic
+		      :background "#090819"
+		      :foreground "#7984D1"
+		      :height 95)
+  
+  (setq tab-bar-separator "  ")
   :init
   (defun Angelique!--open-buffer-in-new-tab ()
     "Return a newly created tab displaying the current buffer.
@@ -673,6 +715,7 @@ The previous window that displays that particular buffer is then deleted."
       (switch-to-buffer cbuffer)))
   :custom
   (tab-bar-new-tab-choice "*dashboard*")
+  (tab-bar-show 1)
   :hook (elpaca-after-init . tab-bar-mode))
 
 ;; Occur
@@ -728,7 +771,8 @@ The previous window that displays that particular buffer is then deleted."
 		      :background "unspecified"
 		      :foreground "cyan")
   (setq symbol-overlay-idle-time 0.25)
-  :hook ((prog-mode) . symbol-overlay-mode))
+  :hook ((prog-mode
+	  org-mode) . symbol-overlay-mode))
 
 (use-package embark
   :ensure t
@@ -747,7 +791,7 @@ The previous window that displays that particular buffer is then deleted."
 (use-package smartparens
   :ensure t
   :defer 1
-  :hook (prog-mode)
+  :hook ((prog-mode org-mode))
   :config (require 'smartparens-config))
 
 (use-package vundo
@@ -759,7 +803,6 @@ The previous window that displays that particular buffer is then deleted."
   :commands (vterm vterm-other-window
 		   vterm-module-compile
 		   vterm-next-error-function)
-  :bind ("C-c v" . vterm-other-window)
   :config
   (setq vterm-timer-delay nil)
   (add-hook 'vterm-mode-hook
@@ -1014,7 +1057,8 @@ This is done using `cape-capf-super'."
 		       #'eglot-completion-at-point #'tempel-complete #'cape-file #'cape-dabbrev))))
   :hook
   (eglot-managed-mode . eglot-setup-completion)
-  ((python-ts-mode
+  ((ess-mode
+    python-ts-mode
     c-ts-mode
     c++-ts-mode
     rust-ts-mode) . eglot-ensure))
@@ -1100,6 +1144,11 @@ This is done using `cape-capf-super'."
 ;;  Do take a look at treesit-auto for some ideas.
 ;; ============================================================================
 
+(use-package treesit
+  :ensure nil
+  :custom
+  (treesit-font-lock-level 4))
+
 (defun Angelique!--treesit (language-specs)
 
   "Batch configure Tree-sitter for multiple `LANGUAGE-SPECS'.
@@ -1167,7 +1216,12 @@ this function takes the following as arguments.
    (rust
     ("https://github.com/tree-sitter/tree-sitter-rust")
     "\\.rs\\'"
-    rust-mode)))
+    rust-mode)
+   (bash
+    ("https://github.com/tree-sitter/tree-sitter-bash")
+    "\\.sh\\'"
+    sh-mode
+    bash-ts-mode)))
 
 ;; ============================================================================
 ;;  Configure Dired / dirvish.
@@ -1222,6 +1276,7 @@ this function takes the following as arguments.
 		      :weight 'bold
 		      :slant 'italic
 		      :foreground "#FBA0E3")
+  
   (set-face-attribute 'org-level-1 nil
 		      :family "VictorMono Nerd Font Mono"
 		      :weight 'bold
@@ -1229,18 +1284,48 @@ this function takes the following as arguments.
 		      :foreground "cyan"
 		      :height 133)
 
-  (defun Angelique!--show-intro-for-garden ()
+  (defun Angelique!--org-show-intro-for-garden ()
     "Reveal intro section in my garden org file."
     (interactive)
     (when (and (derived-mode-p 'org-mode)
 	       buffer-file-name
-	       (not (string-match-p ".*庭園の王女\\.org\\'" buffer-file-name)))
+	       (not (string-match-p ".*\\(庭園の王女\\|Bookmarks\\).org\\'" buffer-file-name)))
       (run-at-time "0.01 sec" nil
 		   (lambda () (save-excursion
 				(goto-char (point-min))
 				(when (re-search-forward "^\\*" nil t)
 				  (org-cycle)
 				  (org-cycle)))))))
+
+  (defun Angelique!--org-last-modified ()
+    "Insert or update the #+LAST_MODIFIED: line at point."
+    (let ((insert-point (point))
+	  (mod-str (format-time-string "#+LAST_MODIFIED: [%Y-%m-%d %A %H:%M]")))
+      (if (re-search-forward "^#\\+LAST_MODIFIED:.*" nil t)
+          (replace-match mod-str)
+	(goto-char insert-point)
+	(insert mod-str "\n"))))
+  
+  (defun Angelique!--org-update-last-modified ()
+    "Ensure #+LAST_MODIFIED is updated just after #+DATE:.
+Or, insert both after #+AUTHOR: if needed."
+    (when (derived-mode-p 'org-mode)
+      (let ((date-str (format-time-string "#+DATE: [%Y-%m-%d %A %H:%M]")))
+	(save-excursion
+	  (goto-char (point-min))
+	  ;; Go to AUTHOR property...
+	  (when (re-search-forward "^#\\+AUTHOR:.*" nil t)
+	    ;; and move to line where DATE property is.
+	    (forward-line 1)
+	    (cond
+	     ;; if DATE exists, move past it and update/insert LAST_MODIFIED
+	     ((looking-at "^#\\+DATE:.*")
+	      (forward-line 1)
+	      (Angelique!--org-last-modified))
+	     (t
+	      (insert date-str "\n")
+	      (Angelique!--org-last-modified))))))))
+  
   (transient-define-prefix Angelique!--org-navigation ()
     "Transient layout for easier Org navigation."
     ["Angelique! Org-navigation..."
@@ -1250,17 +1335,21 @@ this function takes the following as arguments.
       ("s" "org-roam-buffer-toggle" org-roam-buffer-toggle)
       ("t" "org-roam-ui-open" org-roam-ui-open)
       ("g" "org-roam-db-sync" org-roam-db-sync)]
-     ["Babel"
+     ["Babel & Properties"
       ("e" "org-babel-tangle" org-babel-tangle)
       ("i" "org-insert-block-template" org-insert-block-template)
-      ("d" "org-babel-demarcate-block" org-babel-demarcate-block)]
+      ("d" "org-babel-demarcate-block" org-babel-demarcate-block)
+      ("p" "org-set-property" org-set-property)]
      ["Search & Link"
       ("q" "org-ql-search" org-ql-search)
       ("f" "org-ql-find" org-ql-find)
       ("l" "org-store-link" org-store-link)
-      ("L" "org-insert-last-stored-link" org-insert-last-stored-link)]
-     ["Restart"
-      ("x" "Restart" org-mode-restart :transient t)]])
+      ("L" "org-insert-last-stored-link" org-insert-last-stored-link)
+      ("n" "org-insert-link" (lambda () (interactive) (call-interactively #'org-insert-link)))]
+     ["Misc"
+      ("u" "universal-argument" universal-argument :transient t)
+      ("T" "org-timestamp" (lambda () (interactive) (call-interactively #'org-timestamp)))
+      ("x" "org-mode-restart" org-mode-restart :transient t)]])
   :bind
   (("C-c o" . Angelique!--org-navigation)
    :map org-mode-map
@@ -1271,6 +1360,8 @@ this function takes the following as arguments.
   (org-pretty-entities t)
   (org-hide-emphasis-markers t)
   (org-hide-macro-markers t)
+  (org-display-remote-inline-images 'cache)
+  (org-image-max-width nil)
   (org-directory "~/.emacs.d/Angelique!/庭園の王女/")
   (org-default-notes-file (concat org-directory "/notes.org"))
   
@@ -1293,7 +1384,7 @@ this function takes the following as arguments.
      ("p" . "src python")
      ("c" . "src C")
      ("s" . "src")
-     ("S" . "src sh")
+     ("S" . "src shell")
      ("n" . "notes")
      ("q" . "quote")
      ("u" . "update")
@@ -1306,7 +1397,12 @@ this function takes the following as arguments.
       "ONGOING"
       "SOMEDAY")))
   :hook
-  (org-mode . Angelique!--show-intro-for-garden))
+  (org-mode . Angelique!--org-show-intro-for-garden)
+  (before-save . Angelique!--org-update-last-modified))
+
+(use-package org-remoteimg
+  :ensure (:host github :repo "gaoDean/org-remoteimg")
+  :after org)
 
 (use-package org-modern
   :ensure (:host github :repo "minad/org-modern")
@@ -1327,7 +1423,7 @@ this function takes the following as arguments.
   (org-roam-capture-templates '(("d" "default" plain "%?"
 				 :target
 				 (file+head "${slug}.org"
-					    "#+TITLE: ${title}\n#+AUTHOR:\n#+DATE:\n")
+					    "#+TITLE: ${title}\n#+AUTHOR:\n")
 				 :unnarrowed t))))
 
 (use-package org-roam-ui
@@ -1347,12 +1443,46 @@ this function takes the following as arguments.
   :hook
   (org-mode . org-appear-mode))
 
+;; (use-package org-noter
+;;   :ensure t)
+
+;; (use-package org-pdftools
+;;   :ensure t)
+
+;; https://github.com/nobiot/org-transclusion
+;; (use-package org-transclusion
+;;   :ensure t)
+
 ;; ============================================================================
 ;;  Other programming modes here...
 ;; ============================================================================
 
 (use-package ess
   :ensure t)
+
+;; ============================================================================
+;;  gptel goes here...
+;; ============================================================================
+
+(use-package gptel
+  :ensure t
+  :defer 2)
+
+;; ============================================================================
+;;  nov.el...for epub support here...
+;;  See: https://github.com/justinbarclay/.emacs.d?tab=readme-ov-file#novel
+;; ============================================================================
+
+(use-package nov
+  :ensure t
+  :mode ("\\.epub\\'" . nov-mode)
+  :hook
+  (nov-mode . (lambda ()
+		(face-remap-add-relative 'variable-pitch
+					 :family "Liberation Serif"
+					 :height 1.0)))
+  (nov-mode . (lambda ()
+		(display-line-numbers-mode -1))))
 
 ;; ============================================================================
 ;;  Testing bed for functions.

@@ -73,8 +73,6 @@
 (setq byte-compile-warnings '(not obsolete))
 (setq warning-suppress-log-types '((comp) (bytecomp))) ;; warnings are annoying!
 
-(setq create-lockfiles nil)
-
 (setq delete-old-versions t
       kept-new-versions 5
       kept-old-versions 2)
