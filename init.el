@@ -462,17 +462,22 @@ inherit the customisations properly."
      ;; Misc
      ("x" nil "Quit"))))
 
-(transient-define-prefix Angelique!--shell-commands ()
-  "Transient layout for shell-commands."
-  ["Angelique! shell-commands..."
+(transient-define-prefix Angelique!--easy-commands ()
+  "Transient layout for commands that has very frequent use."
+  ["Angelique! easy-commands..."
    ["Shell & Compile"
     ("v" "vterm" vterm)
     ("V" "vterm-other-window" vterm-other-window)
     ("s" "async-shell-command" async-shell-command)
     ("S" "shell-command" shell-command)
-    ("c" "compile" compile)]])
+    ("c" "compile" compile)]
+   ["Dogears.el"
+    ("d" "dogears-remember" dogears-remember)
+    ("g" "dogears-go" dogears-go)
+    ("b" "dogears-back" dogears-back)
+    ("l" "dogears-list" dogears-list)]])
 
-(define-key global-map (kbd "C-c s") 'Angelique!--shell-commands)
+(define-key global-map (kbd "C-c s") 'Angelique!--easy-commands)
 
 ;; additional defined keys here...
 (define-key global-map (kbd "C-M-c") 'treesit-up-list)
@@ -581,7 +586,7 @@ This is preferably activated through Angelique!--window-control!"
   (kill-buffer-quit-windows t)
   (even-window-sizes nil)
   (display-buffer-alist
-   '(("\\`\\*\\(Help\\|helpful .*\\|Apropos\\|Occur\\|Org.*\\)\\*\\'"
+   '(("\\`\\*\\(Help\\|helpful .*\\|Apropos\\|Occur\\|Dogears.*\\|Org.*\\)\\*\\'"
       (display-buffer-at-bottom)
       (window-height . 0.35))
      ("\\*Async Shell Command\\*"
@@ -627,7 +632,7 @@ This is preferably activated through Angelique!--window-control!"
       ("H" "tab-bar-switch-to-prev-tab" tab-bar-switch-to-prev-tab)
       ("k" "tab-bar-switch-to-tab" tab-bar-switch-to-tab :transient nil)
       ("r" "tab-bar-switch-to-recent-tab" tab-bar-switch-to-recent-tab :transient nil)
-      ("O" "open-buffer-in-new-tab" Angelique!--open-buffer-in-new-tab :transient nil)]
+      ("O" "tab-bar-move-window-to-tab" tab-bar-move-window-to-tab :transient nil)]
      ["Resize & Balance"
       (";" "resize-windows" Angelique!--window-resize-transient)
       (":" "balance-windows" balance-windows)]])
@@ -704,18 +709,10 @@ The DWIM behaviour of this command is as follows:
 		      :height 95)
   
   (setq tab-bar-separator "  ")
-  :init
-  (defun Angelique!--open-buffer-in-new-tab ()
-    "Return a newly created tab displaying the current buffer.
-The previous window that displays that particular buffer is then deleted."
-    (interactive)
-    (let ((cbuffer (current-buffer)))
-      (delete-window)
-      (tab-bar-new-tab-to)
-      (switch-to-buffer cbuffer)))
   :custom
   (tab-bar-new-tab-choice "*dashboard*")
   (tab-bar-show 1)
+  (tab-bar-auto-width nil)
   :hook (elpaca-after-init . tab-bar-mode))
 
 ;; Occur
@@ -755,8 +752,9 @@ The previous window that displays that particular buffer is then deleted."
   :ensure t
   :commands magit
   :after transient
-  :bind (:map magit-log-mode-map
-	      ("S-SPC" . nil)))
+  :config
+  ;; https://mbork.pl/2025-05-12_Coloring_Git_output_in_Magit
+  (setq magit-process-finish-apply-ansi-colors t))
 
 (use-package forge
   :ensure t
@@ -890,6 +888,22 @@ The previous window that displays that particular buffer is then deleted."
 (use-package multiple-cursors
   :ensure t
   :bind ("C-x C-l" . mc/edit-lines))
+
+(use-package dogears
+  :ensure t
+  :defer 1
+  :custom
+  (dogears-ignore-modes '(fundamental-mode
+			  dogears-list-mode
+			  exwm-mode
+			  helm-major-mode
+			  messages-buffer-mode))
+  (dogears-hooks '(imenu-after-jump-hook
+		   before-save-hook))
+  (dogears-idle 2)
+  (dogears-line-width 30)
+  :hook
+  (elpaca-after-init . dogears-mode))
 
 ;; ============================================================================
 ;;  Better help functionality for emacs.
