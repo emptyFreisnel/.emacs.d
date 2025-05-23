@@ -379,12 +379,40 @@ inherit the customisations properly."
   :defer 2
   :commands (avy-goto-char-2
 	     avy-goto-char-timer)
+  :config
+  (defun Angelique!--avy-action-helpful (pt)
+    (save-excursion
+      (goto-char pt)
+      (helpful-at-point))
+    (select-window (cdr (ring-ref avy-ring 0))) t)
+  
+  (transient-define-prefix Angelique!--avy-commands ()
+    "Transient inteface for avy commands."
+    ["Angelique! avy-commands..."
+     ["Goto"
+      ("w" "avy-goto-char"
+       (lambda () (interactive) (call-interactively #'avy-goto-char)))
+      ("r" "avy-goto-word-1"
+       (lambda () (interactive) (call-interactively #'avy-goto-word-1)))
+      ("t" "avy-goto-char-timer"
+       (lambda () (interactive) (call-interactively #'avy-goto-char-timer)))
+      ("l" "avy-goto-line"
+       (lambda () (interactive) (call-interactively #'avy-goto-line)))]])
+ 
   :custom
-  (avy-keys '(?a ?r ?s ?t ?g ?m ?n ?e ?i))
+  (avy-keys '(?a ?r ?s ?x ?c ?d ?n ?e ?i))
   (avy-timeout-seconds 0.35)
+  (avy-dispatch-alist '((?q . avy-action-kill-move)
+			(?Q . avy-action-kill-stay)
+			(?w . avy-action-teleport)
+			(?W . avy-action-mark)
+			(?k . avy-action-copy)
+			(?y . avy-action-yank)
+			(?Y . avy-action-yank-line)
+			(?z . avy-action-zap-to-char)
+			(?h . Angelique!--avy-action-helpful)))
   :bind
-  ("M-r" . avy-goto-char-2)
-  ("M-R" . avy-goto-char-timer))
+  ("M-r" . Angelique!--avy-commands))
 
 (use-package crux
   :ensure t
@@ -392,12 +420,6 @@ inherit the customisations properly."
   :bind
   ("C-a" . crux-move-beginning-of-line)
   ("C-k" . crux-smart-kill-line))
-
-(use-package move-text
-  :ensure t
-  :defer 2
-  :config
-  (move-text-default-bindings))
 
 (use-package hydra
   :ensure t
@@ -468,16 +490,40 @@ inherit the customisations properly."
    ["Shell & Compile"
     ("v" "vterm" vterm)
     ("V" "vterm-other-window" vterm-other-window)
-    ("s" "async-shell-command" async-shell-command)
-    ("S" "shell-command" shell-command)
+    ("a" "async-shell-command" async-shell-command)
+    ("A" "shell-command" shell-command)
     ("c" "compile" compile)]
    ["Dogears.el"
     ("d" "dogears-remember" dogears-remember)
     ("g" "dogears-go" dogears-go)
     ("b" "dogears-back" dogears-back)
-    ("l" "dogears-list" dogears-list)]])
+    ("l" "dogears-list" dogears-list)]
+   ["winner-undo"
+    ("u" "winner-undo" winner-undo)]
+   ["eglot"
+    ("e" "eglot-code-actions" eglot-code-actions)]
+   ["Misc"
+    ("C-u" "universal-argument" universal-argument)
+    ("m" "man" man)
+    ("s" "scratch-buffer" scratch-buffer)
+    ("C" "calendar" calendar)]])
+
+(defun Angelique!--move-line-up ()
+  "Move line up."
+  (interactive)
+  (transpose-lines 1)
+  (forward-line -2))
+
+(defun Angelique!--move-line-down ()
+  "Move line down."
+  (interactive)
+  (forward-line 1)
+  (transpose-lines 1)
+  (forward-line -1))
 
 (define-key global-map (kbd "C-c s") 'Angelique!--easy-commands)
+(define-key global-map (kbd "M-<up>") 'Angelique!--move-line-up)
+(define-key global-map (kbd "M-<down>") 'Angelique!--move-line-down)
 
 ;; additional defined keys here...
 (define-key global-map (kbd "C-M-c") 'treesit-up-list)
@@ -622,20 +668,21 @@ This is preferably activated through Angelique!--window-control!"
       ("S" "split-window-below" split-window-below :transient nil)
       ("d" "delete-window" delete-window :transient nil)
       ("D" "kill-buffer-and-window" kill-buffer-and-window :transient nil)]
-     ["Movement"
-      ("M-o" "ace-window" ace-window)
-      ("b" "switch-to-buffer" switch-to-buffer :transient nil)]
+     ["Movement & buffer navigation."
+      ("b" "switch-to-buffer" switch-to-buffer :transient nil)
+      ("," "previous-buffer" previous-buffer)
+      ("." "next-buffer" next-buffer)]
      ["Tabs"
       ("t" "tab-new" tab-new :transient nil)
       ("T" "tab-close" tab-close :transient nil)
-      ("h" "tab-next" tab-next)
-      ("H" "tab-bar-switch-to-prev-tab" tab-bar-switch-to-prev-tab)
       ("k" "tab-bar-switch-to-tab" tab-bar-switch-to-tab :transient nil)
       ("r" "tab-bar-switch-to-recent-tab" tab-bar-switch-to-recent-tab :transient nil)
       ("O" "tab-bar-move-window-to-tab" tab-bar-move-window-to-tab :transient nil)]
      ["Resize & Balance"
       (";" "resize-windows" Angelique!--window-resize-transient)
-      (":" "balance-windows" balance-windows)]])
+      (":" "balance-windows" balance-windows)]
+     ["Misc"
+      ("C-u" "universal-argument" universal-argument)]])
   :bind ("M-;" . Angelique!--window-control!))
 
 (use-package ace-window
@@ -698,7 +745,7 @@ The DWIM behaviour of this command is as follows:
 		      :family "VictorMono Nerd Font Mono"
 		      :slant 'italic
 		      :background "#0c0a20"
-		      :foreground "#DF85FF"
+		      :foreground "#F4B6FF"
 		      :height 95)
   
   (set-face-attribute 'tab-bar-tab-inactive nil
@@ -707,13 +754,48 @@ The DWIM behaviour of this command is as follows:
 		      :background "#090819"
 		      :foreground "#7984D1"
 		      :height 95)
+
+  (defun Angelique!--nerd-icons-tab-bar-tab-name-all ()
+    "Generate tab name from buffers of all windows.
+This function concatenates nerd-icons to the tab-names.
+If there are more than two windows, separate them with a separator."
+    ;;; bufs is stolen from the original tab-bar-tab-name-all.
+    (let* ((bufs (delete-dups (mapcar #'window-buffer
+                                     (window-list-1 (frame-first-window)
+                                                    'nomini))))
+	   (seperator (propertize "  ❤  " 'face
+				  `(:height 90 :weight bold :foreground "#89B4FA")))
+	   (names (mapcar (lambda (buf)
+			   (let* ((name (buffer-name buf))
+				  (icon (with-current-buffer buf
+					  (nerd-icons-icon-for-buffer)))
+				  (icon-str (if (stringp icon)
+						(concat icon " ") "")))
+			     (concat icon-str name)))
+			 bufs)))
+      (mapconcat #'identity names seperator)))
   
-  (setq tab-bar-separator "  ")
+  (setq tab-bar-separator " ")
+    
+  (defun Angelique!--tab-bar-close-button ()
+    "Propertize tab-bar-close-button to be more pretty <3"
+    (interactive)
+    (setq tab-bar-close-button
+	  (propertize "  x "
+		    'close-tab t
+		    :help "Click to close tab"
+		    'face '(:family "FiraCode Nerd Font Propo"
+				    :height 90 :foreground "hotpink" :weight bold))))
+  
+  :bind ("C-M-<tab>" . tab-bar-switch-to-prev-tab)
   :custom
   (tab-bar-new-tab-choice "*dashboard*")
   (tab-bar-show 1)
   (tab-bar-auto-width nil)
-  :hook (elpaca-after-init . tab-bar-mode))
+  (tab-bar-tab-name-function #'Angelique!--nerd-icons-tab-bar-tab-name-all)
+  :hook
+  (elpaca-after-init . tab-bar-mode)
+  (tab-bar-mode . Angelique!--tab-bar-close-button))
 
 ;; Occur
 (use-package replace
@@ -820,7 +902,6 @@ The DWIM behaviour of this command is as follows:
 
 (use-package exec-path-from-shell
   :ensure t
-  :commands exec-path-from-shell-initialize
   :config
   (when (memq window-system '(mac ns x))
     (exec-path-from-shell-initialize)))
@@ -875,6 +956,13 @@ The DWIM behaviour of this command is as follows:
 
 (use-package polymode
   :ensure t
+  :config
+  ;; (define-hostmode poly-info-hostmode
+  ;;   :mode 'Info-mode)
+  ;; (define-innermode )
+  ;; (define-polymode poly-info-mode
+  ;;   :hostmode 'poly-info-hostmode
+  ;;   :innermode )
   :defer 2)
 
 (use-package emms
@@ -1055,7 +1143,8 @@ This is done using `cape-capf-super'."
 
 (dolist (elisp-capf-hook '(emacs-lisp-mode-hook
 			   lisp-interaction-mode-hook
-			   ielm-mode-hook))
+			   ielm-mode-hook
+			   org-mode-hook))
   (add-hook elisp-capf-hook #'elisp-super-capf))
 
 (use-package eglot
@@ -1235,7 +1324,12 @@ this function takes the following as arguments.
     ("https://github.com/tree-sitter/tree-sitter-bash")
     "\\.sh\\'"
     sh-mode
-    bash-ts-mode)))
+    bash-ts-mode)
+   (json
+    ("https://github.com/tree-sitter/tree-sitter-json")
+    "\\.json\\'"
+    js-json-mode
+    json-ts-mode)))
 
 ;; ============================================================================
 ;;  Configure Dired / dirvish.
@@ -1339,6 +1433,54 @@ Or, insert both after #+AUTHOR: if needed."
 	     (t
 	      (insert date-str "\n")
 	      (Angelique!--org-last-modified))))))))
+
+  (defun Angelique!--org-insert-youtube-transcript-async (url)
+    "Asynchronously fetch YouTube auto-subs (en) via yt-dlp and insert Org-native links."
+    (interactive "MYouTube URL: ")
+    (let* ((id (if (string-match "v=\\([^&]+\\)" url)
+                   (match-string 1 url)
+		 url))
+           (temp-prefix (make-temp-name "/tmp/org-ytdlp-"))
+           (subtitle-file (concat temp-prefix ".en.srv1"))
+           (cmd (list "yt-dlp" "--write-auto-sub" "--no-warnings"
+                      "--sub-lang" "en" "--skip-download" "--sub-format" "srv1"
+                      "-o" temp-prefix
+                      (format "https://youtube.com/watch?v=%s" id))))
+      (make-process
+       :name "yt-dlp-transcript"
+       :buffer "*yt-dlp-output*"
+       :command cmd
+       :noquery t
+       :stderr "*yt-dlp-errors*"
+       :sentinel
+       (lambda (proc event)
+	 (when (string= event "finished\n")
+           (if (not (file-exists-p subtitle-file))
+               (message "No transcript found for %s" id)
+             (with-current-buffer (current-buffer)
+               (save-excursion
+		 (goto-char (point-max))
+		 ;; 1) Insert a plain Org link to the video
+		 (insert (format "[[https://youtu.be/%s][YouTube: %s]]\n\n" id id))
+		 ;; 2) Insert table header
+		 (insert "| Time | Text |\n|-\n")
+		 ;; 3) Parse the .srv1 (XML) and emit each subtitle as a row
+		 (let ((dom (xml-parse-file subtitle-file)))
+                   (dolist (node (dom-by-tag dom 'text))
+                     (let* ((start    (string-to-number (dom-attr node 'start)))
+                            (ts       (format-time-string "%M:%S"
+                                                          (seconds-to-time start)))
+                            (link     (format "[[https://youtu.be/%s?t=%d][%s]]"
+                                              id start ts))
+                            (content  (replace-regexp-in-string
+                                       "[ \n]+" " "
+                                       (replace-regexp-in-string
+					"&#39;" "'" (dom-text node)))))
+                       (insert (format "| %s | %s |\n" link content))))))
+               ;; cleanup
+               (delete-file subtitle-file)
+               (message "Transcript for %s inserted!" id))))))
+      (message "Fetching transcript for %s…" id)))
   
   (transient-define-prefix Angelique!--org-navigation ()
     "Transient layout for easier Org navigation."
@@ -1360,8 +1502,14 @@ Or, insert both after #+AUTHOR: if needed."
       ("l" "org-store-link" org-store-link)
       ("L" "org-insert-last-stored-link" org-insert-last-stored-link)
       ("n" "org-insert-link" (lambda () (interactive) (call-interactively #'org-insert-link)))]
+     ["Transclusion & Transcription"
+      ("k" "org-transclusion-add" org-transclusion-add)
+      ("h" "org-transclusion-remove" org-transclusion-remove)]
+     ["Display images"
+      ("o" "org-display-user-inline-images" org-display-user-inline-images)
+      ("O" "org-link-preview" org-link-preview)]
      ["Misc"
-      ("u" "universal-argument" universal-argument :transient t)
+      ("C-u" "universal-argument" universal-argument :transient t)
       ("T" "org-timestamp" (lambda () (interactive) (call-interactively #'org-timestamp)))
       ("x" "org-mode-restart" org-mode-restart :transient t)]])
   :bind
@@ -1464,7 +1612,19 @@ Or, insert both after #+AUTHOR: if needed."
 ;;   :ensure t)
 
 ;; https://github.com/nobiot/org-transclusion
-;; (use-package org-transclusion
+(use-package org-transclusion
+  :ensure t
+  :hook
+  (org-mode . org-transclusion-mode))
+
+(use-package org-transclusion-http
+  :ensure (:repo "https://git.sr.ht/~ushin/org-transclusion-http")
+  :config
+  (with-eval-after-load 'org-transclusion
+    (add-to-list 'org-transclusion-extensions 'org-transclusion-http)
+    (require 'org-transclusion-http)))
+
+;; (use-package org-media-note
 ;;   :ensure t)
 
 ;; ============================================================================
@@ -1489,6 +1649,7 @@ Or, insert both after #+AUTHOR: if needed."
 
 (use-package nov
   :ensure t
+  :defer t
   :mode ("\\.epub\\'" . nov-mode)
   :hook
   (nov-mode . (lambda ()
