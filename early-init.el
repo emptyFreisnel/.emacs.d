@@ -20,9 +20,19 @@
 (global-so-long-mode 1)
 (setopt native-comp-speed 3)
 
+;;; Runtime optimizations
+;; PERF: A second, case-insensitive pass over `auto-mode-alist' is time wasted.
+(setq auto-mode-case-fold nil)
+
 ;; Disable bidirectional text scanning.
-(setq-default bidi-display-reordering 'left-to-right
-	      bidi-paragraph-direction 'left-to-right)
+
+(setq-default bidi-display-reordering 'left-to-right)
+(setq-default bidi-paragraph-direction 'left-to-right)
+
+;; More performant rapid scrolling over unfontified regions. May cause brief
+;; spells of inaccurate syntax highlighting right after scrolling, which should
+;; quickly self-correct.
+(setq fast-but-imprecise-scrolling t)
 
 (setq auto-mode-case-fold nil)
 

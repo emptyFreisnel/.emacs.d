@@ -171,6 +171,11 @@ If you experience stuttering, increase this.")
   :hook ((prog-mode
 	  org-mode) . colorful-mode))
 
+(use-package info-colors
+  :ensure t
+  :config
+  (add-hook 'Info-selection-hook 'info-colors-fontify-node))
+
 ;; ============================================================================
 ;;  Ibuffer customizations.
 ;; ============================================================================
@@ -502,6 +507,8 @@ inherit the customisations properly."
     ("u" "winner-undo" winner-undo)]
    ["eglot"
     ("e" "eglot-code-actions" eglot-code-actions)]
+   ["tree-sitter"
+    ("t" "treesit-explore" treesit-explore)]
    ["Misc"
     ("C-u" "universal-argument" universal-argument)
     ("m" "man" man)
@@ -521,7 +528,7 @@ inherit the customisations properly."
   (transpose-lines 1)
   (forward-line -1))
 
-(define-key global-map (kbd "C-c s") 'Angelique!--easy-commands)
+(define-key global-map (kbd "C-c e") 'Angelique!--easy-commands)
 (define-key global-map (kbd "M-<up>") 'Angelique!--move-line-up)
 (define-key global-map (kbd "M-<down>") 'Angelique!--move-line-down)
 
@@ -871,8 +878,11 @@ If there are more than two windows, separate them with a separator."
 (use-package smartparens
   :ensure t
   :defer 1
-  :hook ((prog-mode org-mode))
-  :config (require 'smartparens-config))
+  :config
+  (smartparens-global-mode)
+  (require 'smartparens-config)
+  :hook
+  (minibuffer-setup . smartparens-mode))
 
 (use-package vundo
   :ensure t
@@ -953,17 +963,6 @@ If there are more than two windows, separate them with a separator."
      (remove-hook 'pre-command-hook 'keycast--update)))
   (add-to-list 'global-mode-string '("" keycast-mode-line))
   :hook (elpaca-after-init . keycast-mode))
-
-(use-package polymode
-  :ensure t
-  :config
-  ;; (define-hostmode poly-info-hostmode
-  ;;   :mode 'Info-mode)
-  ;; (define-innermode )
-  ;; (define-polymode poly-info-mode
-  ;;   :hostmode 'poly-info-hostmode
-  ;;   :innermode )
-  :defer 2)
 
 (use-package emms
   :ensure t
@@ -1153,6 +1152,9 @@ This is done using `cape-capf-super'."
   (setq completion-category-overrides '((eglot (styles orderless))
 					(eglot-capf (styles orderless))))
   (advice-add 'eglot-completion-at-point :around #'cape-wrap-buster)
+  (add-to-list 'eglot-server-programs
+	       '((angelique-c-mode
+		  angelique-c++-mode) . ("clangd")))
   :init
   (defun eglot-setup-completion ()
     (setq-local completion-at-point-functions
@@ -1164,6 +1166,8 @@ This is done using `cape-capf-super'."
     python-ts-mode
     c-ts-mode
     c++-ts-mode
+    angelique-c-mode
+    angelique-c++-mode
     rust-ts-mode) . eglot-ensure))
 
 (use-package eldoc-box
@@ -1216,11 +1220,11 @@ This is done using `cape-capf-super'."
 
 (use-package breadcrumb
   :ensure t
+  :config
+  (set-face-attribute 'breadcrumb-face nil
+		      :height 95)
   :hook
-  ((emacs-lisp-mode
-    python-ts-mode
-    c-ts-mode
-    c++-ts-mode) . breadcrumb-local-mode))
+  (elpaca-after-init . breadcrumb-mode))
 
 (use-package blamer
   :ensure t
@@ -1249,8 +1253,18 @@ This is done using `cape-capf-super'."
 
 (use-package treesit
   :ensure nil
+  :config
+  (defun Angelique-treesit-query ())
   :custom
-  (treesit-font-lock-level 4))
+  (treesit-font-lock-level 4)
+  :hook
+  ((c-ts-mode
+    c++-ts-mode
+    python-ts-mode) . treesit-inspect-mode))
+
+(use-package AngeliqueC
+  :ensure nil
+  :load-path "~/.emacs.d/Angelique!/AngeliqueC")
 
 (defun Angelique!--treesit (language-specs)
 
