@@ -127,7 +127,7 @@ If you experience stuttering, increase this.")
 
 (use-package nerd-icons
   :ensure t)
-
+   
 (use-package nerd-icons-completion
   :ensure t
   :after marginalia
@@ -822,7 +822,7 @@ If there are more than two windows, separate them with a separator."
     "Show all lines matching REGEXP in buffers with this major-mode."
     (interactive)
     (multi-occur
-     (get-buffers-matching-mode major-mode)
+     (Angelique!--get-buffers-matching-mode major-mode)
      (car (occur-read-primary-args)))))
 
 (use-package delsel
@@ -847,16 +847,18 @@ If there are more than two windows, separate them with a separator."
 
 (use-package forge
   :ensure t
-  :commands forge
   :after magit)
+
+(use-package consult-gh
+  :ensure t)
 
 (use-package symbol-overlay
   :ensure t
   :config
   (require 'symbol-overlay)
   (set-face-attribute 'symbol-overlay-default-face nil
-		      :background "unspecified"
-		      :foreground "cyan")
+		      :background "#89B4FA"
+		      :foreground "#4B0082")
   (setq symbol-overlay-idle-time 0.25)
   :hook ((prog-mode
 	  org-mode) . symbol-overlay-mode))
@@ -974,6 +976,9 @@ If there are more than two windows, separate them with a separator."
 
 (use-package multiple-cursors
   :ensure t
+  ;; :config
+  ;; (transient-define-prefix Angelique!--multiple-cursors ()
+  ;;   )
   :bind ("C-x C-l" . mc/edit-lines))
 
 (use-package dogears
@@ -1260,6 +1265,8 @@ This is done using `cape-capf-super'."
   :hook
   ((c-ts-mode
     c++-ts-mode
+    angelique-c-mode
+    angelique-c++-mode
     python-ts-mode) . treesit-inspect-mode))
 
 (use-package AngeliqueC
@@ -1505,7 +1512,7 @@ Or, insert both after #+AUTHOR: if needed."
       ("s" "org-roam-buffer-toggle" org-roam-buffer-toggle)
       ("t" "org-roam-ui-open" org-roam-ui-open)
       ("g" "org-roam-db-sync" org-roam-db-sync)]
-     ["Babel & Properties"
+     ["Babel & setting properties"
       ("e" "org-babel-tangle" org-babel-tangle)
       ("i" "org-insert-block-template" org-insert-block-template)
       ("d" "org-babel-demarcate-block" org-babel-demarcate-block)
@@ -1524,6 +1531,7 @@ Or, insert both after #+AUTHOR: if needed."
       ("O" "org-link-preview" org-link-preview)]
      ["Misc"
       ("C-u" "universal-argument" universal-argument :transient t)
+      ("z" "org-table-create-or-convert-from-region" org-table-create-or-convert-from-region :transient t)
       ("T" "org-timestamp" (lambda () (interactive) (call-interactively #'org-timestamp)))
       ("x" "org-mode-restart" org-mode-restart :transient t)]])
   :bind
@@ -1558,6 +1566,7 @@ Or, insert both after #+AUTHOR: if needed."
      ("L" . "export latex")
      ("l" . "src emacs-lisp")
      ("p" . "src python")
+     ("j" . "src json-ts")
      ("c" . "src C")
      ("s" . "src")
      ("S" . "src shell")
@@ -1647,6 +1656,9 @@ Or, insert both after #+AUTHOR: if needed."
 
 (use-package ess
   :ensure t)
+
+;; (use-package sly
+;;   :ensurt t)
 
 ;; ============================================================================
 ;;  gptel goes here...
