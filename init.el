@@ -96,6 +96,15 @@ If you experience stuttering, increase this.")
 	    (add-hook 'minibuffer-exit-hook #'gc-minibuffer-exit-hook)))
 
 ;; ============================================================================
+;;  Setting up use-package
+;; ============================================================================
+
+(use-package use-package
+  :ensure nil
+  :custom
+  (use-package-compute-statistics t))
+
+;; ============================================================================
 ;;  Compile-angel to make sure packages are natively compiled.
 ;;  this package actually makes my emacs initialise slower...
 ;;  so i only activate it when there is a new package(s).
@@ -850,7 +859,8 @@ If there are more than two windows, separate them with a separator."
   :after magit)
 
 (use-package consult-gh
-  :ensure t)
+  :ensure t
+  :defer 2)
 
 (use-package symbol-overlay
   :ensure t
@@ -976,10 +986,22 @@ If there are more than two windows, separate them with a separator."
 
 (use-package multiple-cursors
   :ensure t
-  ;; :config
-  ;; (transient-define-prefix Angelique!--multiple-cursors ()
-  ;;   )
-  :bind ("C-x C-l" . mc/edit-lines))
+  :custom
+  (mc/always-run-for-all t)
+  :config
+  (transient-define-prefix Angelique!--multiple-cursors ()
+    "Transient layout for easier multiple-cursor usage."
+    :transient-suffix 'transient--do-stay
+    ["Angelique! Multiple Cursor Menu..."
+     ["Mark & Edit"
+      ("n" "mc/mark-next-like-this" mc/mark-next-like-this)
+      ("N" "mc/skip-to-next-like-this" mc/skip-to-next-like-this)
+      ("e" "mc/mark-all-like-this" mc/mark-all-like-this)
+      ("i" "mc/mark-previous-like-this" mc/mark-previous-like-this)
+      ("I" "mc/mark-previous-like-this" mc/skip-to-previous-like-this)
+      ("o" "mc/edit-lines" mc/edit-lines)]])
+  :bind
+  ("C-x RET m" . Angelique!--multiple-cursors))
 
 (use-package dogears
   :ensure t
@@ -1189,6 +1211,7 @@ This is done using `cape-capf-super'."
   :commands flymake-mode
   :custom
   (flymake-indicator-type 'fringes)
+  ;; (flymake-show-diagnostics-at-end-of-line 'fancy)
   :hook
   (prog-mode . flymake-mode)
   ;; getting annoyed by all the warnings flymake is generating
@@ -1658,7 +1681,7 @@ Or, insert both after #+AUTHOR: if needed."
   :ensure t)
 
 ;; (use-package sly
-;;   :ensurt t)
+;;   :ensure t)
 
 ;; ============================================================================
 ;;  gptel goes here...
