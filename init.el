@@ -498,15 +498,21 @@ inherit the customisations properly."
      ;; Misc
      ("x" nil "Quit"))))
 
+(defun Angelique!--universal-compile ()
+  "Invoke the `compile' command with prefix arg programmatically."
+  (interactive)
+  (let* ((current-prefix-arg '(4)))
+    (call-interactively #'compile)))
+
 (transient-define-prefix Angelique!--easy-commands ()
   "Transient layout for commands that has very frequent use."
   ["Angelique! easy-commands..."
    ["Shell & Compile"
     ("v" "vterm" vterm)
     ("V" "vterm-other-window" vterm-other-window)
-    ("a" "async-shell-command" async-shell-command)
-    ("A" "shell-command" shell-command)
-    ("c" "compile" compile)]
+    ("c" "compile" compile)
+    ("r" "recompile" recompile)
+    ("a" "Angelique!--universal-compile" Angelique!--universal-compile)]
    ["Dogears.el"
     ("d" "dogears-remember" dogears-remember)
     ("g" "dogears-go" dogears-go)
@@ -1665,13 +1671,11 @@ Or, insert both after #+AUTHOR: if needed."
 
 (use-package org-transclusion-http
   :ensure (:repo "https://git.sr.ht/~ushin/org-transclusion-http")
+  :after org-transclusion
   :config
   (with-eval-after-load 'org-transclusion
     (add-to-list 'org-transclusion-extensions 'org-transclusion-http)
     (require 'org-transclusion-http)))
-
-;; (use-package org-media-note
-;;   :ensure t)
 
 ;; ============================================================================
 ;;  Other programming modes here...
@@ -1701,10 +1705,6 @@ Or, insert both after #+AUTHOR: if needed."
   :defer t
   :mode ("\\.epub\\'" . nov-mode)
   :hook
-  (nov-mode . (lambda ()
-		(face-remap-add-relative 'variable-pitch
-					 :family "Liberation Serif"
-					 :height 1.0)))
   (nov-mode . (lambda ()
 		(display-line-numbers-mode -1))))
 
