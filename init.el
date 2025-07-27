@@ -491,12 +491,8 @@ inherit the customisations properly."
      ("C-w" kill-region)
      ("d" delete-region :color blue)
      ("p" delete-pair :color blue)
-     ;; Set mark.
-     ("m" set-mark-command "Mark")
-     ;; Pop to mark.
-     ("M" pop-to-mark-command "Pop-to-mark")
      ;; Misc
-     ("x" nil "Quit"))))
+     ("m" nil "Quit"))))
 
 (defun Angelique!--universal-compile ()
   "Invoke the `compile' command with prefix arg programmatically."
@@ -1441,20 +1437,7 @@ this function takes the following as arguments.
 		      :slant 'italic
 		      :foreground "cyan"
 		      :height 133)
-
-  (defun Angelique!--org-show-intro-for-garden ()
-    "Reveal intro section in my garden org file."
-    (interactive)
-    (when (and (derived-mode-p 'org-mode)
-	       buffer-file-name
-	       (not (string-match-p ".*\\(庭園の王女\\|Bookmarks\\).org\\'" buffer-file-name)))
-      (run-at-time "0.01 sec" nil
-		   (lambda () (save-excursion
-				(goto-char (point-min))
-				(when (re-search-forward "^\\*" nil t)
-				  (org-cycle)
-				  (org-cycle)))))))
-
+  
   (defun Angelique!--org-last-modified ()
     "Insert or update the #+LAST_MODIFIED: line at point."
     (let ((insert-point (point))
@@ -1611,7 +1594,7 @@ Or, insert both after #+AUTHOR: if needed."
       "ONGOING"
       "SOMEDAY")))
   :hook
-  (org-mode . Angelique!--org-show-intro-for-garden)
+  (org-mode . org-link-preview-refresh)
   (before-save . Angelique!--org-update-last-modified))
 
 (use-package org-remoteimg
