@@ -523,6 +523,7 @@ inherit the customisations properly."
    ["Misc"
     ("C-u" "universal-argument" universal-argument)
     ("m" "man" man)
+    ("M" "view-echo-area-messages" view-echo-area-messages)
     ("s" "scratch-buffer" scratch-buffer)
     ("C" "calendar" calendar)]])
 
@@ -1108,6 +1109,7 @@ If there are more than two windows, separate them with a separator."
   (add-hook 'completion-at-point-functions #'cape-dabbrev)
   (add-hook 'completion-at-point-functions #'cape-file)
   (add-hook 'completion-at-point-functions #'cape-elisp-block)
+  (add-hook 'completion-at-point-functions #'cape-history)
   (add-hook 'completion-at-point-functions #'cape-keyword))
 
 (use-package corfu
@@ -1188,7 +1190,10 @@ This is done using `cape-capf-super'."
   (defun eglot-setup-completion ()
     (setq-local completion-at-point-functions
 		(list (cape-capf-super
-		       #'eglot-completion-at-point #'tempel-complete #'cape-file #'cape-dabbrev))))
+		       #'eglot-completion-at-point
+		       #'tempel-complete
+		       #'cape-file
+		       #'cape-dabbrev))))
   :hook
   (eglot-managed-mode . eglot-setup-completion)
   ((ess-mode
@@ -1274,7 +1279,9 @@ This is done using `cape-capf-super'."
 	("TAB" . nil)
 	("M-i" . nil)
 	("C-<tab>" . completion-preview-insert))
-  :hook (prog-mode . completion-preview-mode))
+  :hook
+  (prog-mode . completion-preview-mode)
+  (minibuffer-setup . completion-preview-mode))
 
 ;; ============================================================================
 ;;  Treesitter...
@@ -1429,14 +1436,20 @@ this function takes the following as arguments.
 		      :family "VictorMono Nerd Font Mono"
 		      :weight 'bold
 		      :slant 'italic
-		      :foreground "#FBA0E3")
+		      :foreground "#da70d6")
   
   (set-face-attribute 'org-level-1 nil
 		      :family "VictorMono Nerd Font Mono"
 		      :weight 'bold
 		      :slant 'italic
-		      :foreground "cyan"
+		      :foreground "#FF70F8"
 		      :height 133)
+
+  (set-face-attribute 'org-level-2 nil
+		      :foreground "#EAB3E4")
+
+  (set-face-attribute 'org-document-info nil
+		      :foreground "cyan")
   
   (defun Angelique!--org-last-modified ()
     "Insert or update the #+LAST_MODIFIED: line at point."
@@ -1599,7 +1612,9 @@ Or, insert both after #+AUTHOR: if needed."
 
 (use-package org-remoteimg
   :ensure (:host github :repo "gaoDean/org-remoteimg")
-  :after org)
+  :after org
+  :hook
+  (org-mode . org-display-user-inline-images))
 
 (use-package org-modern
   :ensure (:host github :repo "minad/org-modern")
