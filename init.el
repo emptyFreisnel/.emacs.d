@@ -515,7 +515,7 @@ inherit the customisations properly."
     ("b" "dogears-back" dogears-back)
     ("l" "dogears-list" dogears-list)]
    ["winner-undo"
-    ("u" "winner-undo" winner-undo)]
+    ("u" "winner-undo" winner-undo :transient t)]
    ["eglot"
     ("e" "eglot-code-actions" eglot-code-actions)]
    ["tree-sitter"
@@ -540,7 +540,7 @@ inherit the customisations properly."
   (transpose-lines 1)
   (forward-line -1))
 
-(define-key global-map (kbd "C-c e") 'Angelique!--easy-commands)
+(define-key global-map (kbd "C-c c") 'Angelique!--easy-commands)
 (define-key global-map (kbd "M-<up>") 'Angelique!--move-line-up)
 (define-key global-map (kbd "M-<down>") 'Angelique!--move-line-down)
 
@@ -551,6 +551,10 @@ inherit the customisations properly."
 ;; disabled commands go here...
 (define-key global-map (kbd "C-x m") nil)
 (define-key global-map (kbd "C-x n n") nil)
+
+(with-eval-after-load 'comint
+  (define-key comint-mode-map (kbd "M-f") #'comint-history-isearch-backward-regexp)
+  (define-key comint-mode-map (kbd "M-r") nil))
 
 ;; ============================================================================
 ;;  Buffer toggle.
@@ -783,7 +787,7 @@ If there are more than two windows, separate them with a separator."
                                      (window-list-1 (frame-first-window)
                                                     'nomini))))
 	   (seperator (propertize "  ❤  " 'face
-				  `(:height 90 :weight bold :foreground "#89B4FA")))
+				  `(:height 90 :weight bold :foreground "#FF70F8")))
 	   (names (mapcar (lambda (buf)
 			   (let* ((name (buffer-name buf))
 				  (icon (with-current-buffer buf
@@ -1161,10 +1165,8 @@ If there are more than two windows, separate them with a separator."
   :after tempel)
 
 (defun elisp-super-capf ()
-
   "Unifies `tempel-complete' with `elisp-completion-at-point' for elisp editing.
 This is done using `cape-capf-super'."
-
   (setq-local completion-at-point-functions
 	      (list (cape-capf-super
 		     #'tempel-complete
@@ -1282,6 +1284,17 @@ This is done using `cape-capf-super'."
   :hook
   (prog-mode . completion-preview-mode)
   (minibuffer-setup . completion-preview-mode))
+
+(defun minibuffer-super-capf ()
+  "Enforce super CAPF's in the minibuffer."
+  (setq-local completion-at-point-functions
+	      (list
+	       #'cape-history
+	       #'comint-completion-at-point
+	       t)))
+
+(define-key minibuffer-local-completion-map (kbd "TAB") #'corfu-complete)
+(add-hook 'minibuffer-setup-hook #'minibuffer-super-capf)
 
 ;; ============================================================================
 ;;  Treesitter...
