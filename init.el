@@ -492,7 +492,7 @@ inherit the customisations properly."
      ("d" delete-region :color blue)
      ("p" delete-pair :color blue)
      ;; Misc
-     ("m" nil "Quit"))))
+     ("M-i" nil "Quit"))))
 
 (defun Angelique!--universal-compile ()
   "Invoke the `compile' command with prefix arg programmatically."
@@ -1584,6 +1584,7 @@ Or, insert both after #+AUTHOR: if needed."
   (org-hide-macro-markers t)
   (org-display-remote-inline-images 'cache)
   (org-image-max-width nil)
+  (org-use-sub-superscripts '{})
   (org-directory "~/.emacs.d/Angelique!/庭園の王女/")
   (org-default-notes-file (concat org-directory "/notes.org"))
   
