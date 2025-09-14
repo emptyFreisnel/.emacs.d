@@ -522,7 +522,6 @@ inherit the customisations properly."
     ("t" "treesit-explore" treesit-explore)]
    ["Misc"
     ("C-u" "universal-argument" universal-argument)
-    ("m" "man" man)
     ("M" "view-echo-area-messages" view-echo-area-messages)
     ("s" "scratch-buffer" scratch-buffer)
     ("C" "calendar" calendar)]])
@@ -658,8 +657,6 @@ This is preferably activated through Angelique!--window-control!"
    '(("\\`\\*\\(Help\\|helpful .*\\|Apropos\\|Occur\\|Dogears.*\\|Org.*\\)\\*\\'"
       (display-buffer-at-bottom)
       (window-height . 0.35))
-     ("\\*Async Shell Command\\*"
-      (display-buffer-no-window))
      ("\\*Embark Collect: .*\\*"
       (display-buffer-at-bottom)
       (window-height . 0.3))
@@ -767,7 +764,7 @@ The DWIM behaviour of this command is as follows:
   (set-face-attribute 'tab-bar-tab nil
 		      :family "VictorMono Nerd Font Mono"
 		      :slant 'italic
-		      :background "#0c0a20"
+		      :background "#2F0052"
 		      :foreground "#F4B6FF"
 		      :height 95)
   
@@ -784,20 +781,29 @@ This function concatenates nerd-icons to the tab-names.
 If there are more than two windows, separate them with a separator."
     ;;; bufs is stolen from the original tab-bar-tab-name-all.
     (let* ((bufs (delete-dups (mapcar #'window-buffer
-                                     (window-list-1 (frame-first-window)
-                                                    'nomini))))
+                                      (window-list-1 (frame-first-window)
+                                                     'nomini))))
+	   ;;; TODO:  use tab-bar-tabs to make seperator dynamic.
+  ;; 	   (let ((tabs (tab-bar-tabs)))
+  ;; (dolist (entry tabs)
+  ;;   (pcase entry
+  ;;     (`(current-tab . ,alist)
+  ;;      (message "ACTIVE TAB: %s" (alist-get 'name alist)))
+  ;;     (`(tab . ,alist)
+  ;;      (message "INACTIVE TAB: %s" (alist-get 'name alist))))))
 	   (seperator (propertize "  ❤  " 'face
-				  `(:height 90 :weight bold :foreground "#FF70F8")))
+				  `(:height 1.1 :weight bold :foreground "#FF70F8")))
 	   (names (mapcar (lambda (buf)
-			   (let* ((name (buffer-name buf))
-				  (icon (with-current-buffer buf
-					  (nerd-icons-icon-for-buffer)))
-				  (icon-str (if (stringp icon)
-						(concat icon " ") "")))
-			     (concat icon-str name)))
-			 bufs)))
-      (mapconcat #'identity names seperator)))
-  
+			    (let* ((name (buffer-name buf))
+				   (icon (with-current-buffer buf
+					   (nerd-icons-icon-for-buffer)))
+				   (icon-str (if (stringp icon)
+						 (concat icon " ") "")))
+			      (concat icon-str name)))
+			  bufs)))
+      (if (< (length bufs) 4) (mapconcat #'identity names seperator)
+	(format "%s%s(+%d)" (car names) seperator (1- (length bufs))))))
+
   (setq tab-bar-separator " ")
     
   (defun Angelique!--tab-bar-close-button ()
@@ -951,6 +957,7 @@ If there are more than two windows, separate them with a separator."
 	 ("M-s M-f" . consult-find)
 	 ("M-s M-o" . consult-outline)
 	 ("M-s M-l" . consult-line)
+	 ("M-s M-m" . consult-man)
 	 ("M-s M-b" . consult-buffer)))
 
 (use-package consult-eglot
@@ -1307,11 +1314,13 @@ This is done using `cape-capf-super'."
   (defun Angelique-treesit-query ())
   :custom
   (treesit-font-lock-level 4)
+  (treesit-load-name-override-list '((c-sharp "libtree-sitter-csharp" "tree_sitter_c_sharp")))
   :hook
   ((c-ts-mode
     c++-ts-mode
     angelique-c-mode
     angelique-c++-mode
+    csharp-ts-mode
     python-ts-mode) . treesit-inspect-mode))
 
 (use-package AngeliqueC
@@ -1382,6 +1391,12 @@ this function takes the following as arguments.
     "\\.\\(cpp\\|hpp\\)\\'"
     c++-mode
     c++-ts-mode)
+   ;; we can do a shim in c or we can do treesit-load-name-override-list
+   (c-sharp
+    ("https://github.com/tree-sitter/tree-sitter-c-sharp")
+    "\\.cs\\'"
+    csharp-mode
+    csharp-ts-mode)
    (rust
     ("https://github.com/tree-sitter/tree-sitter-rust")
     "\\.rs\\'"
@@ -1719,25 +1734,6 @@ Or, insert both after #+AUTHOR: if needed."
   :hook
   (nov-mode . (lambda ()
 		(display-line-numbers-mode -1))))
-
-;; ============================================================================
-;;  Testing bed for functions.
-;;  TODO: to have my own functions in a package for optimisation.
-;; ============================================================================
-
-;; (use-package Angelique!
-;;  :ensure nil
-;;  :load-path ""
-;;  )
-
-;; ============================================================================
-;;  Trying out EXWM...
-;; ============================================================================
-
-;; (use-package exwm
-;;  :ensure t
-;;  :config
-;;  (exwm-enable))
 
 ;; ============================================================================
 ;;  Envrc which is evaluated last in this file.
