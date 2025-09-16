@@ -1711,6 +1711,9 @@ Or, insert both after #+AUTHOR: if needed."
 (use-package ess
   :ensure t)
 
+(use-package meson-mode
+  :ensure t)
+
 ;; (use-package sly
 ;;   :ensure t)
 
