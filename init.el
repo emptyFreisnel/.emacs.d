@@ -506,6 +506,7 @@ inherit the customisations properly."
    ["Shell & Compile"
     ("v" "vterm" vterm)
     ("V" "vterm-other-window" vterm-other-window)
+    ("E" "eshell" eshell)
     ("c" "compile" compile)
     ("r" "recompile" recompile)
     ("a" "Angelique!--universal-compile" Angelique!--universal-compile)]
@@ -923,7 +924,41 @@ If there are more than two windows, separate them with a separator."
   (add-hook 'vterm-mode-hook
 	    (lambda ()
 	      (hl-line-mode nil)
-	      (display-line-numbers-mode -1)))'t)
+	      (display-line-numbers-mode -1))))
+
+(use-package eat
+  :ensure t
+  :commands eat
+  :hook
+  (eat-mode . (lambda ()
+		   (hl-line-mode nil)
+		   (display-line-numbers-mode -1))))
+
+(use-package eshell
+  :ensure nil
+  :commands eshell
+  :hook
+  (eshell-load . eat-eshell-mode)
+  (eshell-load . eat-eshell-visual-command-mode)
+  (eshell-mode . (lambda ()
+		   (hl-line-mode nil)
+		   (display-line-numbers-mode -1))))
+
+(use-package compile
+  :ensure nil
+  :hook
+  (compilation-filter . ansi-color-compilation-filter))
+
+(use-package comint
+  :ensure nil
+  :custom
+  (comint-terminfo-terminal "dumb"))
+
+(use-package comint-mime
+  :ensure t
+  :hook
+  (shell-mode . comint-mime-setup)
+  (inferior-python-mode . comint-mime-setup))
 
 (use-package which-key
   :ensure nil
@@ -994,10 +1029,6 @@ If there are more than two windows, separate them with a separator."
   :ensure t
   :defer 2)
 
-(use-package expand-region
-  :ensure t
-  :bind ("C-x C-n" . er/expand-region))
-
 (use-package multiple-cursors
   :ensure t
   :custom
@@ -1013,7 +1044,7 @@ If there are more than two windows, separate them with a separator."
       ("e" "mc/mark-all-like-this" mc/mark-all-like-this)
       ("i" "mc/mark-previous-like-this" mc/mark-previous-like-this)
       ("I" "mc/mark-previous-like-this" mc/skip-to-previous-like-this)
-      ("o" "mc/edit-lines" mc/edit-lines)]])
+      ("o" "mc/edit-ends-of-lines" mc/edit-ends-of-lines)]])
   :bind
   ("C-x RET m" . Angelique!--multiple-cursors))
 
@@ -1030,8 +1061,7 @@ If there are more than two windows, separate them with a separator."
 		   before-save-hook))
   (dogears-idle 2)
   (dogears-line-width 30)
-  :hook
-  (elpaca-after-init . dogears-mode))
+  :hook (elpaca-after-init . dogears-mode))
 
 ;; ============================================================================
 ;;  Better help functionality for emacs.
@@ -1140,6 +1170,8 @@ If there are more than two windows, separate them with a separator."
   (setq tab-always-indent 'complete)
   (setq corfu-preview-current nil)
   (setq corfu-min-width 10)
+  (setq corfu-preselect 'prompt)
+  (setq corfu-quit-no-match t)
   (setq corfu-popupinfo-delay '(1.25 . 0.5))
   (corfu-popupinfo-mode 1) ; shows documentation after 'corfu-popupinfo-delay'
   ;; Sort by input history (no need to modify 'corfu-sort-function')
@@ -1606,6 +1638,7 @@ Or, insert both after #+AUTHOR: if needed."
   (org-babel-load-languages
    '((emacs-lisp . t)
      (shell . t)
+     (eshell . t)
      (C . t)
      (R . t)
      (python . t)
@@ -1693,6 +1726,7 @@ Or, insert both after #+AUTHOR: if needed."
 ;; https://github.com/nobiot/org-transclusion
 (use-package org-transclusion
   :ensure t
+  :after org
   :hook
   (org-mode . org-transclusion-mode))
 
@@ -1704,6 +1738,10 @@ Or, insert both after #+AUTHOR: if needed."
     (add-to-list 'org-transclusion-extensions 'org-transclusion-http)
     (require 'org-transclusion-http)))
 
+(use-package org-drill
+  :ensure t
+  :after org)
+
 ;; ============================================================================
 ;;  Other programming modes here...
 ;; ============================================================================
@@ -1714,8 +1752,19 @@ Or, insert both after #+AUTHOR: if needed."
 (use-package meson-mode
   :ensure t)
 
-;; (use-package sly
-;;   :ensure t)
+(use-package yaml-mode
+  :ensure t
+  :mode ("\\.ya?ml\\'" "\\.clangd\\'"))
+
+(use-package code-cells
+  :ensure t)
+
+(use-package python
+  :ensure nil
+  :config
+  (if (executable-find "~/.venv/bin/ipython3")
+      (setq python-shell-interpreter "~/.venv/bin/ipython3")
+    (setq python-shell-interpreter "~/.venv/bin/python3.13")))
 
 ;; ============================================================================
 ;;  gptel goes here...
