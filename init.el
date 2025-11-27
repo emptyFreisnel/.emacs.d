@@ -468,22 +468,22 @@ inherit the customisations properly."
      ("n" backward-char)
      ("e" next-line)
      ("i" previous-line)
-     ("o" forward-char)
+     ("a" forward-char)
      ;; Slurping and barfing.
-     ("a" sp-backward-slurp-sexp)
+     ("c" sp-backward-slurp-sexp)
      ("t" sp-forward-slurp-sexp)
      ;; Advanced navigation.
      ("C-a" crux-move-beginning-of-line)
      ("C-e" move-end-of-line)
      ("M-r" avy-goto-char-2)
-     ("M-a" backward-sentence)
+     ("M-o" backward-sentence)
      ("M-e" forward-sentence)
-     ("M-o" right-word)
+     ("M-a" right-word)
      ("M-n" left-word)
      ("M-u" sp-backward-symbol)
      ("M-y" sp-forward-symbol)
      ("C-M-n" backward-sexp)
-     ("C-M-o" forward-sexp)
+     ("C-M-a" forward-sexp)
      ;; More easy to reach keys for yank/kill
      ("w" sp-delete-word)
      ("f" sp-kill-sexp)
@@ -521,11 +521,12 @@ inherit the customisations properly."
     ("e" "eglot-code-actions" eglot-code-actions)]
    ["tree-sitter"
     ("t" "treesit-explore" treesit-explore)]
+   ["code-cells"
+    ("C" "code-cells-eval" code-cells-eval)]
    ["Misc"
     ("C-u" "universal-argument" universal-argument)
     ("M" "view-echo-area-messages" view-echo-area-messages)
-    ("s" "scratch-buffer" scratch-buffer)
-    ("C" "calendar" calendar)]])
+    ("s" "scratch-buffer" scratch-buffer)]])
 
 (defun Angelique!--move-line-up ()
   "Move line up."
@@ -946,6 +947,8 @@ If there are more than two windows, separate them with a separator."
 
 (use-package compile
   :ensure nil
+  :custom
+  (compilation-ask-about-save nil)
   :hook
   (compilation-filter . ansi-color-compilation-filter))
 
@@ -959,6 +962,12 @@ If there are more than two windows, separate them with a separator."
   :hook
   (shell-mode . comint-mime-setup)
   (inferior-python-mode . comint-mime-setup))
+
+(use-package coterm
+  :ensure t
+  :hook
+  (elpaca-after-init . coterm-mode)
+  (elpaca-after-init . coterm-auto-char-mode))
 
 (use-package which-key
   :ensure nil
@@ -977,8 +986,7 @@ If there are more than two windows, separate them with a separator."
     (exec-path-from-shell-initialize)))
 
 (use-package pdf-tools
-  :ensure t
-  :defer 2)
+  :ensure t)
 
 (use-package webjump
   :ensure nil
@@ -1203,21 +1211,6 @@ If there are more than two windows, separate them with a separator."
   :ensure t
   :after tempel)
 
-(defun elisp-super-capf ()
-  "Unifies `tempel-complete' with `elisp-completion-at-point' for elisp editing.
-This is done using `cape-capf-super'."
-  (setq-local completion-at-point-functions
-	      (list (cape-capf-super
-		     #'tempel-complete
-		     #'elisp-completion-at-point
-		     #'cape-dabbrev))))
-
-(dolist (elisp-capf-hook '(emacs-lisp-mode-hook
-			   lisp-interaction-mode-hook
-			   ielm-mode-hook
-			   org-mode-hook))
-  (add-hook elisp-capf-hook #'elisp-super-capf))
-
 (use-package eglot
   :ensure nil
   :config
@@ -1324,16 +1317,39 @@ This is done using `cape-capf-super'."
   (prog-mode . completion-preview-mode)
   (minibuffer-setup . completion-preview-mode))
 
-(defun minibuffer-super-capf ()
-  "Enforce super CAPF's in the minibuffer."
+(defun elisp-super-capf ()
+  "Unifies `tempel-complete' with `elisp-completion-at-point' for elisp editing.
+This is done using `cape-capf-super'."
   (setq-local completion-at-point-functions
-	      (list
-	       #'cape-history
-	       #'comint-completion-at-point
-	       t)))
+	      (list (cape-capf-super
+		     #'tempel-complete
+		     #'elisp-completion-at-point
+		     #'cape-dabbrev))))
+
+(dolist (elisp-capf-hook '(emacs-lisp-mode-hook
+			   lisp-interaction-mode-hook
+			   ielm-mode-hook
+			   org-mode-hook))
+  (add-hook elisp-capf-hook #'elisp-super-capf))
+
+(defun minibuffer-and-comint-super-capf ()
+  "Enforce super CAPF's in the minibuffer and 'comint-mode'."
+  (setq-local completion-at-point-functions
+	      (list (cape-capf-super
+		     #'cape-history
+		     #'comint-completion-at-point))))
+
+(defun Angelique!--comint-or-compilation-complete ()
+  "Completion at point for comint or compilation buffers.
+Temporarily disables read-only so Corfu/Cape can insert."
+  (interactive)
+  (let ((inhibit-read-only t))
+    (completion-at-point)))
 
 (define-key minibuffer-local-completion-map (kbd "TAB") #'corfu-complete)
-(add-hook 'minibuffer-setup-hook #'minibuffer-super-capf)
+(add-hook 'minibuffer-setup-hook #'minibuffer-and-comint-super-capf)
+(define-key comint-mode-map (kbd "C-M-u") #'Angelique!--comint-or-compilation-complete)
+(add-hook 'comint-mode-hook #'minibuffer-and-comint-super-capf)
 
 ;; ============================================================================
 ;;  Treesitter...
@@ -1342,11 +1358,10 @@ This is done using `cape-capf-super'."
 
 (use-package treesit
   :ensure nil
-  :config
-  (defun Angelique-treesit-query ())
   :custom
   (treesit-font-lock-level 4)
   (treesit-load-name-override-list '((c-sharp "libtree-sitter-csharp" "tree_sitter_c_sharp")))
+  (treesit-extra-load-path '("~/.emacs.d/tree-sitter/"))
   :hook
   ((c-ts-mode
     c++-ts-mode
@@ -1442,7 +1457,18 @@ this function takes the following as arguments.
     ("https://github.com/tree-sitter/tree-sitter-json")
     "\\.json\\'"
     js-json-mode
-    json-ts-mode)))
+    json-ts-mode)
+   (javascript
+    ("https://github.com/tree-sitter/tree-sitter-javascript")
+    "\\.js\\'"
+    js-mode
+    js-ts-mode)
+   (jsdoc
+    ("https://github.com/tree-sitter/tree-sitter-jsdoc")
+    "\\(\\.js[mx]\\|\\.har\\)\\'"
+    js-mode
+    js-ts-mode)))
+
 
 ;; ============================================================================
 ;;  Configure Dired / dirvish.
@@ -1619,6 +1645,10 @@ Or, insert both after #+AUTHOR: if needed."
       ("z" "org-table-create-or-convert-from-region" org-table-create-or-convert-from-region :transient t)
       ("T" "org-timestamp" (lambda () (interactive) (call-interactively #'org-timestamp)))
       ("x" "org-mode-restart" org-mode-restart :transient t)]])
+
+  ;;; Go to man pages in org mode.
+  (with-eval-after-load 'org (require 'ol-man))
+  
   :bind
   (("C-c o" . Angelique!--org-navigation)
    :map org-mode-map
@@ -1717,12 +1747,6 @@ Or, insert both after #+AUTHOR: if needed."
   :hook
   (org-mode . org-appear-mode))
 
-;; (use-package org-noter
-;;   :ensure t)
-
-;; (use-package org-pdftools
-;;   :ensure t)
-
 ;; https://github.com/nobiot/org-transclusion
 (use-package org-transclusion
   :ensure t
@@ -1738,9 +1762,7 @@ Or, insert both after #+AUTHOR: if needed."
     (add-to-list 'org-transclusion-extensions 'org-transclusion-http)
     (require 'org-transclusion-http)))
 
-(use-package org-drill
-  :ensure t
-  :after org)
+;; (use-package org-scs)
 
 ;; ============================================================================
 ;;  Other programming modes here...
@@ -1757,7 +1779,10 @@ Or, insert both after #+AUTHOR: if needed."
   :mode ("\\.ya?ml\\'" "\\.clangd\\'"))
 
 (use-package code-cells
-  :ensure t)
+  :ensure t
+  :hook
+  ((python-mode
+    python-ts-mode) . code-cells-mode-maybe))
 
 (use-package python
   :ensure nil
@@ -1783,6 +1808,20 @@ Or, insert both after #+AUTHOR: if needed."
   :ensure t
   :defer t
   :mode ("\\.epub\\'" . nov-mode)
+  :config
+  (with-eval-after-load 'nov
+    (add-to-list 'shr-external-rendering-functions
+		 '(i . (lambda (dom)
+			 (shr-fontize-dom dom 'italic))))
+    (add-to-list 'shr-external-rendering-functions
+		 '(em . (lambda (dom)
+			  (shr-fontize-dom dom 'italic))))
+    (add-to-list 'shr-external-rendering-functions
+		 '(strong . (lambda (dom)
+			      (shr-fontize-dom dom 'bold))))
+    (add-to-list 'shr-external-rendering-functions
+		 '(b . (lambda (dom)
+			      (shr-fontize-dom dom 'bold)))))
   :hook
   (nov-mode . (lambda ()
 		(display-line-numbers-mode -1))))
