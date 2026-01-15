@@ -1,26 +1,7 @@
 ;;; package --- init.el -*- lexical-binding: t -*-
 
 ;;; Commentary:
-;;  emptyFreisnel's [isabelrenata] personal Emacs config...
-
-;; ============================================================================
-
-;;  See Protesilaos Stavrou excellent articles on Emacs...and minimal-emacs.
-
-;;  Emacs is just too much sometimes...so uhm...will document as i go along...
-;;  omg...this editor(sorry is it OS? hehe) is no joke.  Emacs is nuts and
-;;  im going nuts too! help me help me help me!  think ill die at
-;;  some point for learning this.  at least im having fun... (for now...)
-
-;;  Decided to convert using org-babel tangle at some point...
-;;  i am terrible at lisp... so these little comments are my lifesavers...
-;;  dunno if anyone would actually read this but...isabel...you can do this...
-;;  please be kind to yourself! whoever is reading this... you are loved <3
-
-;;  Reminder to use the "*scratch*" buffer on functions in packages for
-;;  debugging purposes.
-
-;; ============================================================================
+;;  emptyFreisnel's personal Emacs config...
 
 ;; Setup package manager...using Elpaca.
 ;; Do remember to update the packages using elpaca-update.
@@ -414,7 +395,7 @@ inherit the customisations properly."
        (lambda () (interactive) (call-interactively #'avy-goto-line)))]])
  
   :custom
-  (avy-keys '(?a ?r ?s ?x ?c ?d ?n ?e ?i))
+  (avy-keys '(?c ?r ?s ?t ?b ?f ?n ?e ?i))
   (avy-timeout-seconds 0.35)
   (avy-dispatch-alist '((?q . avy-action-kill-move)
 			(?Q . avy-action-kill-stay)
@@ -785,14 +766,6 @@ If there are more than two windows, separate them with a separator."
     (let* ((bufs (delete-dups (mapcar #'window-buffer
                                       (window-list-1 (frame-first-window)
                                                      'nomini))))
-	   ;;; TODO:  use tab-bar-tabs to make seperator dynamic.
-  ;; 	   (let ((tabs (tab-bar-tabs)))
-  ;; (dolist (entry tabs)
-  ;;   (pcase entry
-  ;;     (`(current-tab . ,alist)
-  ;;      (message "ACTIVE TAB: %s" (alist-get 'name alist)))
-  ;;     (`(tab . ,alist)
-  ;;      (message "INACTIVE TAB: %s" (alist-get 'name alist))))))
 	   (seperator (propertize "  ❤  " 'face
 				  `(:height 1.1 :weight bold :foreground "#FF70F8")))
 	   (names (mapcar (lambda (buf)
@@ -945,6 +918,14 @@ If there are more than two windows, separate them with a separator."
 		   (hl-line-mode nil)
 		   (display-line-numbers-mode -1))))
 
+(use-package shell
+  :ensure nil
+  :commands shell
+  :hook
+  (shell-mode . (lambda ()
+		   (hl-line-mode nil)
+		   (display-line-numbers-mode -1))))
+
 (use-package compile
   :ensure nil
   :custom
@@ -955,7 +936,8 @@ If there are more than two windows, separate them with a separator."
 (use-package comint
   :ensure nil
   :custom
-  (comint-terminfo-terminal "dumb"))
+  (comint-terminfo-terminal "dumb")
+  (comint-input-ring-size 2000))
 
 (use-package comint-mime
   :ensure t
@@ -1042,19 +1024,28 @@ If there are more than two windows, separate them with a separator."
   :custom
   (mc/always-run-for-all t)
   :config
-  (transient-define-prefix Angelique!--multiple-cursors ()
-    "Transient layout for easier multiple-cursor usage."
-    :transient-suffix 'transient--do-stay
-    ["Angelique! Multiple Cursor Menu..."
-     ["Mark & Edit"
-      ("n" "mc/mark-next-like-this" mc/mark-next-like-this)
-      ("N" "mc/skip-to-next-like-this" mc/skip-to-next-like-this)
-      ("e" "mc/mark-all-like-this" mc/mark-all-like-this)
-      ("i" "mc/mark-previous-like-this" mc/mark-previous-like-this)
-      ("I" "mc/mark-previous-like-this" mc/skip-to-previous-like-this)
-      ("o" "mc/edit-ends-of-lines" mc/edit-ends-of-lines)]])
-  :bind
-  ("C-x RET m" . Angelique!--multiple-cursors))
+  (defun Angelique--multiple-cursors-activation ()
+    (interactive)
+    (message (propertize
+	      "🩷(🌸ᴗ͈ˬᴗ͈)🩷* Multiple-Cursors activated! 🩷(🌸ᴗ͈ˬᴗ͈)🩷*"
+	      'face `(:foreground "#FF83FA"))))
+    
+  (defun Angelique--multiple-cursors-deactivation ()
+    (interactive)
+    (message (propertize
+	      "🩵(💠ᴗ͈ˬᴗ͈)🩵* Multiple-Cursors deactivated! 🩵(💠ᴗ͈ˬᴗ͈)🩵*"
+	      'face `(:foreground "cyan"))))
+  
+  (global-set-key
+   (kbd "C-x C-n")
+   (defhydra Angelique!--multiple-cursors-map
+     (:pre Angelique--multiple-cursors-activation
+      :post Angelique--multiple-cursors-deactivation
+      :color red)
+     ("n" mc/mark-next-like-this "next-like-this")
+     ("e" mc/mark-next-like-this-word "next-like-this-word")
+     ("i" mc/edit-lines "edit-lines")
+     ("o" mc/mark-previous-like-this "previous-like-this"))))
 
 (use-package dogears
   :ensure t
@@ -1062,7 +1053,6 @@ If there are more than two windows, separate them with a separator."
   :custom
   (dogears-ignore-modes '(fundamental-mode
 			  dogears-list-mode
-			  exwm-mode
 			  helm-major-mode
 			  messages-buffer-mode))
   (dogears-hooks '(imenu-after-jump-hook
@@ -1139,6 +1129,8 @@ If there are more than two windows, separate them with a separator."
 
 (use-package savehist
   :ensure nil
+  :config
+  (setq history-length 2000)
   :hook (elpaca-after-init . savehist-mode))
 
 ;; ============================================================================
