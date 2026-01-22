@@ -74,6 +74,7 @@
 
 (size-indication-mode t)
 
+(setq display-line-numbers-type 'relative)
 (global-display-line-numbers-mode 1)    ;; line numbers
 (global-hl-line-mode +1)                ;; always highlight current line
 
