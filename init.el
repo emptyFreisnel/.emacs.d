@@ -1,7 +1,7 @@
 ;;; package --- init.el -*- lexical-binding: t -*-
 
 ;;; Commentary:
-;;  emptyFreisnel's personal Emacs config...
+;;  emptyFreisnel's personal Emacs config...please don't use this it's ugly and gross.
 
 ;; Setup package manager...using Elpaca.
 ;; Do remember to update the packages using elpaca-update.
@@ -543,7 +543,7 @@ inherit the customisations properly."
 ;;  https://www.reddit.com/r/emacs/comments/l4v1ux/one_of_the_most_useful_small_lisp_functions_in_my/
 ;; ============================================================================
 
-(defun Angelique!--toggle-or-create (buffer-name buffer-create-fn &optional switch-cont)
+(defun Angelique!--toggle-or-create (buffer-name &optional buffer-create-fn switch-cont)
   "Makes a toggle-function to have raise-or-create behaviour.
 
   Creates a toggle-function that executes BUFFER-CREATE-FN if a
@@ -555,18 +555,19 @@ inherit the customisations properly."
   after the buffer has been created or switched to.  This allows
   running further actions that setup the state of the buffer or
   modify it."
-  (interactive)
-  (let ((target-buf (get-buffer buffer-name)))
-    (prin1 target-buf)
-    (cond
-     ((equal (current-buffer) target-buf)
-      (switch-to-buffer nil))
-     (target-buf
-      (switch-to-buffer target-buf)
-      (if switch-cont (funcall switch-cont)))
-     (t
-      (funcall buffer-create-fn)
-      (if switch-cont (funcall switch-cont))))))
+  (lambda ()
+    (interactive)
+    (let ((target-buf (get-buffer buffer-name)))
+      (prin1 target-buf)
+      (cond
+       ((equal (current-buffer) target-buf)
+	(switch-to-buffer nil))
+       (target-buf
+	(switch-to-buffer target-buf)
+	(if switch-cont (funcall switch-cont)))
+       (t
+	(funcall buffer-create-fn)
+	(if switch-cont (funcall switch-cont)))))))
 
 ;; ============================================================================
 ;;  Prevent the cursor from going into the minibuffer prompt.
@@ -964,7 +965,7 @@ If there are more than two windows, separate them with a separator."
 (use-package exec-path-from-shell
   :ensure t
   :config
-  (when (memq window-system '(mac ns x))
+  (when (memq window-system '(mac ns x pgtk))
     (exec-path-from-shell-initialize)))
 
 (use-package pdf-tools
@@ -1366,101 +1367,16 @@ Temporarily disables read-only so Corfu/Cape can insert."
   :ensure nil
   :load-path "~/.emacs.d/Angelique!/AngeliqueC")
 
-(defun Angelique!--treesit (language-specs)
-
-  "Batch configure Tree-sitter for multiple `LANGUAGE-SPECS'.
-This function will (hopefully) fallback to the original mode if there
-is no ts-mode.  Each spec(s) is a list corresponding to the arguments
-stated in the cons cells of `treesit-language-source-alist':
-
-`(LANG (URL &OPTIONAL[REVISION SOURCE-DIR CC C++ COMMIT])
- EXT ORIG-MODE &OPTIONAL TS-MODE-NAME)'.
-
-- `LANG': The specified programming language to install
-	  the tree-sitter grammars.
-	- `URL' : The source of the tree-sitter grammars.
-  &OPTIONAL:
-  -  `REVISION'  : Git tag or branch of the desired version.
-		   Defaults to the latest default branch.
-  -  `SOURCE-DIR': The tree-sitter parser (usually in `src').
-		   Defaults to `src'.
-  -  `CC'and`C++': Compilers for C and C++.
-		   Defaults to \"cc\" and \"c++\" respectively.
-  -  `COMMIT'    : If non-nil, checks out the commit hash
-		   while cloning the repo.
-
-For `auto-mode-alist' and `major-mode-remap-alist',
-this function takes the following as arguments.
-
-- `EXT'      : The file-extension of that particular programming
-	       language that tree-sitter will be parsing.
-- `ORIG-MODE': The original major-mode that tree-sitter will replace.
-  &OPTIONAL:
-  - `TS-MODE-NAME': This is for edge cases where the string does not
-		    translate well to the particular tree-sitter `-ts-mode'
-		    when passing through `lang', for example see `cpp' and `C++'."
-  (interactive)
-  (require 'treesit)
-  (dolist (spec language-specs)
-    (cl-destructuring-bind (lang (url &optional rev src cc c++ commit)
-				 ext orig-mode &optional ts-mode-name) spec
-      (add-to-list 'treesit-language-source-alist
-		   `(,lang . (,url ,@(if rev (list rev) nil) ,@(if src (list src) nil)
-				   ,@(if cc (list cc) nil) ,@(if c++ (list c++) nil)
-				   ,@(if commit (list commit) nil))))
-      (unless (treesit-ready-p lang) (treesit-install-language-grammar lang))
-      (when (treesit-ready-p lang)
-	(let ((ts-mode (or ts-mode-name (intern (format "%s-ts-mode" lang)))))
-	  (add-to-list 'auto-mode-alist
-		       `(,ext . (lambda () (if (fboundp ',ts-mode) (,ts-mode) (,orig-mode)))))
-	  (when (fboundp ts-mode)
-			  (add-to-list 'major-mode-remap-alist `(,orig-mode . ,ts-mode))))))))
-
-(Angelique!--treesit
- '((python
-    ("https://github.com/tree-sitter/tree-sitter-python")
-    "\\.py\\'"
-    python-mode)
-   (c
-    ("https://github.com/tree-sitter/tree-sitter-c")
-    "\\.c\\'"
-    c-mode)
-   (cpp
-    ("https://github.com/tree-sitter/tree-sitter-cpp")
-    "\\.\\(cpp\\|hpp\\)\\'"
-    c++-mode
-    c++-ts-mode)
-   ;; we can do a shim in c or we can do treesit-load-name-override-list
-   (c-sharp
-    ("https://github.com/tree-sitter/tree-sitter-c-sharp")
-    "\\.cs\\'"
-    csharp-mode
-    csharp-ts-mode)
-   (rust
-    ("https://github.com/tree-sitter/tree-sitter-rust")
-    "\\.rs\\'"
-    rust-mode)
-   (bash
-    ("https://github.com/tree-sitter/tree-sitter-bash")
-    "\\.sh\\'"
-    sh-mode
-    bash-ts-mode)
-   (json
-    ("https://github.com/tree-sitter/tree-sitter-json")
-    "\\.json\\'"
-    js-json-mode
-    json-ts-mode)
-   (javascript
-    ("https://github.com/tree-sitter/tree-sitter-javascript")
-    "\\.js\\'"
-    js-mode
-    js-ts-mode)
-   (jsdoc
-    ("https://github.com/tree-sitter/tree-sitter-jsdoc")
-    "\\(\\.js[mx]\\|\\.har\\)\\'"
-    js-mode
-    js-ts-mode)))
-
+(dolist (pair
+	 '((c-mode . c-ts-mode)
+	   (c++-mode . c++-ts-mode)
+	   (csharp-mode . csharp-ts-mode)
+	   (python-mode . python-ts-mode)
+	   (rust-mode . rust-ts-mode)
+	   (sh-mode . bash-ts-mode)
+	   (js-json-mode . json-ts-mode)
+	   (js-mode . js-ts-mode)))
+  (add-to-list 'major-mode-remap-alist pair))
 
 ;; ============================================================================
 ;;  Configure Dired / dirvish.
@@ -1698,7 +1614,7 @@ Or, insert both after #+AUTHOR: if needed."
   :ensure (:host github :repo "gaoDean/org-remoteimg")
   :after org
   :hook
-  (org-mode . org-display-user-inline-images))
+  (org-mode . org-display-user-inline-images))    
 
 (use-package org-modern
   :ensure (:host github :repo "minad/org-modern")
