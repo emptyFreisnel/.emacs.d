@@ -1257,12 +1257,6 @@ If there are more than two windows, separate them with a separator."
   :ensure t
   :hook (eglot-managed-mode . flymake-ruff-load))
 
-(use-package dape
-  :ensure t
-  :commands dape
-  :config
-  (dape-breakpoint-global-mode))
-
 (use-package sideline-flymake
   :ensure t)
 
@@ -1287,17 +1281,6 @@ If there are more than two windows, separate them with a separator."
 		      :height 95)
   :hook
   (elpaca-after-init . breadcrumb-mode))
-
-(use-package blamer
-  :ensure t
-  :defer 2
-  :bind
-  ("C-c b" . blamer-show-posframe-commit-info)
-  ("C-c B" . blamer-mode)
-  :custom
-  (blamer-view 'overlay)
-  (blamer-idle-time 0.5)
-  (blamer-min-offset 30))
 
 (use-package completion-preview
   :ensure nil
@@ -1358,14 +1341,8 @@ Temporarily disables read-only so Corfu/Cape can insert."
   :hook
   ((c-ts-mode
     c++-ts-mode
-    angelique-c-mode
-    angelique-c++-mode
     csharp-ts-mode
     python-ts-mode) . treesit-inspect-mode))
-
-(use-package AngeliqueC
-  :ensure nil
-  :load-path "~/.emacs.d/Angelique!/AngeliqueC")
 
 (dolist (pair
 	 '((c-mode . c-ts-mode)
@@ -1473,54 +1450,6 @@ Or, insert both after #+AUTHOR: if needed."
 	     (t
 	      (insert date-str "\n")
 	      (Angelique!--org-last-modified))))))))
-
-  (defun Angelique!--org-insert-youtube-transcript-async (url)
-    "Asynchronously fetch YouTube auto-subs (en) via yt-dlp and insert Org-native links."
-    (interactive "MYouTube URL: ")
-    (let* ((id (if (string-match "v=\\([^&]+\\)" url)
-                   (match-string 1 url)
-		 url))
-           (temp-prefix (make-temp-name "/tmp/org-ytdlp-"))
-           (subtitle-file (concat temp-prefix ".en.srv1"))
-           (cmd (list "yt-dlp" "--write-auto-sub" "--no-warnings"
-                      "--sub-lang" "en" "--skip-download" "--sub-format" "srv1"
-                      "-o" temp-prefix
-                      (format "https://youtube.com/watch?v=%s" id))))
-      (make-process
-       :name "yt-dlp-transcript"
-       :buffer "*yt-dlp-output*"
-       :command cmd
-       :noquery t
-       :stderr "*yt-dlp-errors*"
-       :sentinel
-       (lambda (proc event)
-	 (when (string= event "finished\n")
-           (if (not (file-exists-p subtitle-file))
-               (message "No transcript found for %s" id)
-             (with-current-buffer (current-buffer)
-               (save-excursion
-		 (goto-char (point-max))
-		 ;; 1) Insert a plain Org link to the video
-		 (insert (format "[[https://youtu.be/%s][YouTube: %s]]\n\n" id id))
-		 ;; 2) Insert table header
-		 (insert "| Time | Text |\n|-\n")
-		 ;; 3) Parse the .srv1 (XML) and emit each subtitle as a row
-		 (let ((dom (xml-parse-file subtitle-file)))
-                   (dolist (node (dom-by-tag dom 'text))
-                     (let* ((start    (string-to-number (dom-attr node 'start)))
-                            (ts       (format-time-string "%M:%S"
-                                                          (seconds-to-time start)))
-                            (link     (format "[[https://youtu.be/%s?t=%d][%s]]"
-                                              id start ts))
-                            (content  (replace-regexp-in-string
-                                       "[ \n]+" " "
-                                       (replace-regexp-in-string
-					"&#39;" "'" (dom-text node)))))
-                       (insert (format "| %s | %s |\n" link content))))))
-               ;; cleanup
-               (delete-file subtitle-file)
-               (message "Transcript for %s inserted!" id))))))
-      (message "Fetching transcript for %s…" id)))
   
   (transient-define-prefix Angelique!--org-navigation ()
     "Transient layout for easier Org navigation."
@@ -1614,7 +1543,7 @@ Or, insert both after #+AUTHOR: if needed."
   :ensure (:host github :repo "gaoDean/org-remoteimg")
   :after org
   :hook
-  (org-mode . org-display-user-inline-images))    
+  (org-mode . org-display-user-inline-images))
 
 (use-package org-modern
   :ensure (:host github :repo "minad/org-modern")
@@ -1669,8 +1598,6 @@ Or, insert both after #+AUTHOR: if needed."
   (with-eval-after-load 'org-transclusion
     (add-to-list 'org-transclusion-extensions 'org-transclusion-http)
     (require 'org-transclusion-http)))
-
-;; (use-package org-scs)
 
 ;; ============================================================================
 ;;  Other programming modes here...
