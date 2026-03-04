@@ -491,11 +491,6 @@ inherit the customisations properly."
     ("c" "compile" compile)
     ("r" "recompile" recompile)
     ("a" "Angelique!--universal-compile" Angelique!--universal-compile)]
-   ["Dogears.el"
-    ("d" "dogears-remember" dogears-remember)
-    ("g" "dogears-go" dogears-go)
-    ("b" "dogears-back" dogears-back)
-    ("l" "dogears-list" dogears-list)]
    ["winner-undo"
     ("u" "winner-undo" winner-undo :transient t)]
    ["eglot"
@@ -529,6 +524,7 @@ inherit the customisations properly."
 ;; additional defined keys here...
 (define-key global-map (kbd "C-M-c") 'treesit-up-list)
 (define-key global-map (kbd "C-M-d") 'treesit-down-list)
+(define-key global-map (kbd "M-p") 'duplicate-line)
 
 ;; disabled commands go here...
 (define-key global-map (kbd "C-x m") nil)
@@ -674,13 +670,13 @@ This is preferably activated through Angelique!--window-control!"
       ("D" "kill-buffer-and-window" kill-buffer-and-window :transient nil)]
      ["Movement & buffer navigation."
       ("b" "switch-to-buffer" switch-to-buffer :transient nil)
+      ("k" "kill-buffer" kill-buffer)
       ("," "previous-buffer" previous-buffer)
       ("." "next-buffer" next-buffer)]
      ["Tabs"
       ("t" "tab-new" tab-new :transient nil)
       ("T" "tab-close" tab-close :transient nil)
-      ("k" "tab-bar-switch-to-tab" tab-bar-switch-to-tab :transient nil)
-      ("r" "tab-bar-switch-to-recent-tab" tab-bar-switch-to-recent-tab :transient nil)
+      ("r" "tab-bar-switch-to-tab" tab-bar-switch-to-tab :transient nil)
       ("O" "tab-bar-move-window-to-tab" tab-bar-move-window-to-tab :transient nil)]
      ["Resize & Balance"
       (";" "resize-windows" Angelique!--window-resize-transient)
@@ -853,6 +849,7 @@ If there are more than two windows, separate them with a separator."
 
 (use-package symbol-overlay
   :ensure t
+  :bind ("M-t" . symbol-overlay-put)
   :config
   (require 'symbol-overlay)
   (set-face-attribute 'symbol-overlay-default-face nil
@@ -896,10 +893,10 @@ If there are more than two windows, separate them with a separator."
 		   vterm-next-error-function)
   :config
   (setq vterm-timer-delay nil)
-  (add-hook 'vterm-mode-hook
-	    (lambda ()
-	      (hl-line-mode nil)
-	      (display-line-numbers-mode -1))))
+  :hook
+  (vterm-mode . (lambda ()
+		  (hl-line-mode nil)
+		  (display-line-numbers-mode -1))))
 
 (use-package eat
   :ensure t
@@ -969,7 +966,11 @@ If there are more than two windows, separate them with a separator."
     (exec-path-from-shell-initialize)))
 
 (use-package pdf-tools
-  :ensure t)
+  :ensure t
+  :hook
+  (pdf-view-mode . (lambda ()
+		     (hl-line-mode nil)
+		     (display-line-numbers-mode -1))))
 
 (use-package webjump
   :ensure nil
@@ -1020,47 +1021,21 @@ If there are more than two windows, separate them with a separator."
   :ensure t
   :defer 2)
 
-(use-package multiple-cursors
+(use-package iedit
   :ensure t
-  :custom
-  (mc/always-run-for-all t)
   :config
-  (defun Angelique--multiple-cursors-activation ()
-    (interactive)
-    (message (propertize
-	      "🩷(🌸ᴗ͈ˬᴗ͈)🩷* Multiple-Cursors activated! 🩷(🌸ᴗ͈ˬᴗ͈)🩷*"
-	      'face `(:foreground "#FF83FA"))))
-    
-  (defun Angelique--multiple-cursors-deactivation ()
-    (interactive)
-    (message (propertize
-	      "🩵(💠ᴗ͈ˬᴗ͈)🩵* Multiple-Cursors deactivated! 🩵(💠ᴗ͈ˬᴗ͈)🩵*"
-	      'face `(:foreground "cyan"))))
-  
-  (global-set-key
-   (kbd "C-x C-n")
-   (defhydra Angelique!--multiple-cursors-map
-     (:pre Angelique--multiple-cursors-activation
-      :post Angelique--multiple-cursors-deactivation
-      :color red)
-     ("n" mc/mark-next-like-this "next-like-this")
-     ("e" mc/mark-next-like-this-word "next-like-this-word")
-     ("i" mc/edit-lines "edit-lines")
-     ("o" mc/mark-previous-like-this "previous-like-this"))))
-
-(use-package dogears
-  :ensure t
-  :defer 1
-  :custom
-  (dogears-ignore-modes '(fundamental-mode
-			  dogears-list-mode
-			  helm-major-mode
-			  messages-buffer-mode))
-  (dogears-hooks '(imenu-after-jump-hook
-		   before-save-hook))
-  (dogears-idle 2)
-  (dogears-line-width 30)
-  :hook (elpaca-after-init . dogears-mode))
+  (transient-define-prefix Angelique!--iedit-transient ()
+    "Transient layout for iedit."
+    ["iedit interface..."
+     ["Activation"
+      ("i" "iedit-mode" iedit-mode)]
+     ["Movement"
+      ("n" "next-occurrence" iedit-next-occurrence :transient t)
+      ("p" "prev-occurrence" iedit-prev-occurrence :transient t)]
+     ["Toggle"
+      ("t" "toggle-selection" iedit-toggle-selection :transient t)
+      ("T" "toggle-buffering" iedit-toggle-buffering :transient t)]])
+  :bind ("C-x C-n" . Angelique!--iedit-transient))
 
 ;; ============================================================================
 ;;  Better help functionality for emacs.
@@ -1288,7 +1263,8 @@ If there are more than two windows, separate them with a separator."
   (:map completion-preview-active-mode-map
 	("TAB" . nil)
 	("M-i" . nil)
-	("C-<tab>" . completion-preview-insert))
+	;; Shift-Tab (s-TAB)
+	("<backtab>" . completion-preview-insert))
   :hook
   (prog-mode . completion-preview-mode)
   (minibuffer-setup . completion-preview-mode))
@@ -1342,6 +1318,7 @@ Temporarily disables read-only so Corfu/Cape can insert."
   ((c-ts-mode
     c++-ts-mode
     csharp-ts-mode
+    rust-ts-mode
     python-ts-mode) . treesit-inspect-mode))
 
 (dolist (pair
@@ -1349,7 +1326,6 @@ Temporarily disables read-only so Corfu/Cape can insert."
 	   (c++-mode . c++-ts-mode)
 	   (csharp-mode . csharp-ts-mode)
 	   (python-mode . python-ts-mode)
-	   (rust-mode . rust-ts-mode)
 	   (sh-mode . bash-ts-mode)
 	   (js-json-mode . json-ts-mode)
 	   (js-mode . js-ts-mode)))
@@ -1549,7 +1525,8 @@ Or, insert both after #+AUTHOR: if needed."
   :ensure (:host github :repo "minad/org-modern")
   :custom
   ;; to enable org-modern-indent when org-indent is active.
-  (org-modern-block-indent t)
+  ;; it is kind of buggy so turning it off for now...
+  (org-modern-block-indent nil)
   (org-modern-star 'replace)
   :hook
   (org-mode . org-modern-mode)
@@ -1622,9 +1599,10 @@ Or, insert both after #+AUTHOR: if needed."
 (use-package python
   :ensure nil
   :config
-  (if (executable-find "~/.venv/bin/ipython3")
-      (setq python-shell-interpreter "~/.venv/bin/ipython3")
-    (setq python-shell-interpreter "~/.venv/bin/python3.13")))
+  ;; (if (executable-find "~/.venv/bin/ipython3")
+  ;;     (setq python-shell-interpreter "~/.venv/bin/ipython3")
+  ;;   (setq python-shell-interpreter "~/.venv/bin/python3.13"))
+  )
 
 ;; ============================================================================
 ;;  gptel goes here...
