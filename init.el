@@ -535,37 +535,6 @@ inherit the customisations properly."
   (define-key comint-mode-map (kbd "M-r") nil))
 
 ;; ============================================================================
-;;  Buffer toggle.
-;;  https://www.reddit.com/r/emacs/comments/l4v1ux/one_of_the_most_useful_small_lisp_functions_in_my/
-;; ============================================================================
-
-(defun Angelique!--toggle-or-create (buffer-name &optional buffer-create-fn switch-cont)
-  "Makes a toggle-function to have raise-or-create behaviour.
-
-  Creates a toggle-function that executes BUFFER-CREATE-FN if a
-  buffer named BUFFER-NAME doesn't exist, switches to the buffer
-  named BUFFER-NAME if it exists, and switches to the previous
-  buffer if we are currently visiting buffer BUFFER-NAME.
-
-  The SWITCH-CONT argument is a function which, if given, is called
-  after the buffer has been created or switched to.  This allows
-  running further actions that setup the state of the buffer or
-  modify it."
-  (lambda ()
-    (interactive)
-    (let ((target-buf (get-buffer buffer-name)))
-      (prin1 target-buf)
-      (cond
-       ((equal (current-buffer) target-buf)
-	(switch-to-buffer nil))
-       (target-buf
-	(switch-to-buffer target-buf)
-	(if switch-cont (funcall switch-cont)))
-       (t
-	(funcall buffer-create-fn)
-	(if switch-cont (funcall switch-cont)))))))
-
-;; ============================================================================
 ;;  Prevent the cursor from going into the minibuffer prompt.
 ;;  Also custom functions set to have Emacs handle windows better.
 ;; ============================================================================
@@ -574,48 +543,43 @@ inherit the customisations properly."
 			(quote (read-only t cursor-intangible t face minibuffer-prompt)))
 
 ;; https://protesilaos.com/emacs/dotemacs#h:50f8b1e4-b14e-453f-a37e-1c0e495ab80f
-(use-package window ;; window.el
+
+(defvar base-number 1
+  "Number for basic window resizing operations.")
+(defvar precision-number 1
+  "A more precise number for fine-grained window-resizing.")
+
+(defun set-base-number (arg)
+  "Set base-multiplier to ARG."
+  (interactive "nEnter base multiplier: ")
+  (setq base-number (max 1 arg)))
+
+(defun set-precision-number (arg)
+  "Set precision-multiplier to ARG."
+  (interactive "nEnter precision multiplier: ")
+  (setq precision-number (max 1 arg)))
+
+(defmacro Angelique!--resize-cmd (name window-func)
+  "Resize window using multipliers.
+`NAME' is the template for the function name and `WINDOW-FUNC'
+is the template for one of the following functions:
+`enlarge-window',
+`enlarge-window-horizontally',
+`shrink-window',
+`shrink-window-horizontally'."
+
+  `(defun ,name ()
+     (interactive)
+     (,window-func (* base-number precision-number))))
+
+(Angelique!--resize-cmd Angelique!--enlarge-window-horizontally enlarge-window-horizontally)
+(Angelique!--resize-cmd Angelique!--enlarge-window enlarge-window)
+(Angelique!--resize-cmd Angelique!--shrink-window shrink-window)
+(Angelique!--resize-cmd Angelique!--shrink-window-horizontally shrink-window-horizontally)
+
+(use-package window
   :ensure nil
   :config
-  (defvar base-number 1
-    "Number for basic window resizing operations.")
-  (defvar precision-number 1
-    "A more precise number for fine-grained window-resizing.")
-
-  (defun set-base-number (arg)
-    "Set base-multiplier to ARG."
-    (interactive "nEnter base multiplier: ")
-    (setq base-number (max 1 arg)))
-
-  (defun set-precision-number (arg)
-    "Set precision-multiplier to ARG."
-    (interactive "nEnter precision multiplier: ")
-    (setq precision-number (max 1 arg)))
-
-  (defun Angelique!--enlarge-window ()
-    "Resize window height using multipliers."
-    (interactive)
-    (enlarge-window (* base-number
-		       precision-number)))
-
-  (defun Angelique!--enlarge-window-horizontally ()
-    "Resize window height using multipliers."
-    (interactive)
-    (enlarge-window-horizontally (* base-number
-				    precision-number)))
-
-  (defun Angelique!--shrink-window ()
-    "Resize window height using multipliers."
-    (interactive)
-    (shrink-window (* base-number
-		      precision-number)))
-
-  (defun Angelique!--shrink-window-horizontally ()
-    "Resize window height using multipliers."
-    (interactive)
-    (shrink-window-horizontally (* base-number
-				   precision-number)))
-
   (transient-define-prefix Angelique!--window-resize-transient ()
     "Transient layout for minute resizing of windows.
 This is preferably activated through Angelique!--window-control!"
@@ -626,7 +590,7 @@ This is preferably activated through Angelique!--window-control!"
       ("u" "set-base-number" set-base-number)
       ("y" "set-precision-number" set-precision-number)]
      ["Resize"
-      ("n" "Widen" Angelique!--enlarge-window-horizontally)
+      ("n" "Widen"Angelique!--enlarge-window-horizontally)
       ("e" "Heighten" Angelique!--enlarge-window)
       ("i" "Shrink" Angelique!--shrink-window)
       ("o" "Narrow" Angelique!--shrink-window-horizontally)]])
@@ -1023,19 +987,9 @@ If there are more than two windows, separate them with a separator."
 
 (use-package iedit
   :ensure t
-  :config
-  (transient-define-prefix Angelique!--iedit-transient ()
-    "Transient layout for iedit."
-    ["iedit interface..."
-     ["Activation"
-      ("i" "iedit-mode" iedit-mode)]
-     ["Movement"
-      ("n" "next-occurrence" iedit-next-occurrence :transient t)
-      ("p" "prev-occurrence" iedit-prev-occurrence :transient t)]
-     ["Toggle"
-      ("t" "toggle-selection" iedit-toggle-selection :transient t)
-      ("T" "toggle-buffering" iedit-toggle-buffering :transient t)]])
-  :bind ("C-x C-n" . Angelique!--iedit-transient))
+  :custom
+  (iedit-toggle-key-default nil)
+  :bind ("C-x C-n" . iedit-mode))
 
 ;; ============================================================================
 ;;  Better help functionality for emacs.
@@ -1096,8 +1050,8 @@ If there are more than two windows, separate them with a separator."
   (add-to-list 'recentf-exclude
 	       (recentf-expand-file-name no-littering-etc-directory))
   :init
-  (setq recentf-max-menu-items 25)
-  (setq recentf-max-saved-items 25)
+  (setq recentf-max-menu-items 50)
+  (setq recentf-max-saved-items 50)
   (recentf-mode)
   :hook
   (kill-emacs . recentf-save-list)
@@ -1110,10 +1064,8 @@ If there are more than two windows, separate them with a separator."
   :hook (elpaca-after-init . savehist-mode))
 
 ;; ============================================================================
-;;  LSP completions go here... using eglot.  removed lsp-mode as i wanna
-;;  go as built-in as possible for the time being. for debugging, i feel like
-;;  dap-mode relies on dependencies i dont really need? (treemacs)
-;;  dape seems to be nice.
+;;  LSP completions go here... using eglot. removed lsp-mode as i wanna
+;;  go as built-in as possible for the time being.
 ;; ============================================================================
 
 (use-package cape
@@ -1145,7 +1097,7 @@ If there are more than two windows, separate them with a separator."
 		      :background "#B2FFFF")
   (setq tab-always-indent 'complete)
   (setq corfu-preview-current nil)
-  (setq corfu-min-width 10)
+  (setq corfu-count 30)
   (setq corfu-preselect 'prompt)
   (setq corfu-quit-no-match t)
   (setq corfu-popupinfo-delay '(1.25 . 0.5))
@@ -1185,9 +1137,6 @@ If there are more than two windows, separate them with a separator."
   (setq completion-category-overrides '((eglot (styles orderless))
 					(eglot-capf (styles orderless))))
   (advice-add 'eglot-completion-at-point :around #'cape-wrap-buster)
-  (add-to-list 'eglot-server-programs
-	       '((angelique-c-mode
-		  angelique-c++-mode) . ("clangd")))
   :init
   (defun eglot-setup-completion ()
     (setq-local completion-at-point-functions
@@ -1202,8 +1151,6 @@ If there are more than two windows, separate them with a separator."
     python-ts-mode
     c-ts-mode
     c++-ts-mode
-    angelique-c-mode
-    angelique-c++-mode
     rust-ts-mode) . eglot-ensure))
 
 (use-package eldoc-box
@@ -1303,9 +1250,14 @@ Temporarily disables read-only so Corfu/Cape can insert."
 (define-key comint-mode-map (kbd "C-M-u") #'Angelique!--comint-or-compilation-complete)
 (add-hook 'comint-mode-hook #'minibuffer-and-comint-super-capf)
 
+;; remember to have codelldb
+(use-package dape
+  :ensure t
+  :config
+  (setq dape-request-timeout 30))
+
 ;; ============================================================================
-;;  Treesitter...
-;;  Do take a look at treesit-auto for some ideas.
+;;  Treesitter...and configuring the modes to the correct ones...
 ;; ============================================================================
 
 (use-package treesit
@@ -1330,6 +1282,8 @@ Temporarily disables read-only so Corfu/Cape can insert."
 	   (js-json-mode . json-ts-mode)
 	   (js-mode . js-ts-mode)))
   (add-to-list 'major-mode-remap-alist pair))
+
+(add-to-list 'auto-mode-alist '("\\.pdf\\'" . pdf-view-mode))
 
 ;; ============================================================================
 ;;  Configure Dired / dirvish.
@@ -1397,6 +1351,13 @@ Temporarily disables read-only so Corfu/Cape can insert."
 
   (set-face-attribute 'org-document-info nil
 		      :foreground "cyan")
+
+  (set-face-attribute 'org-block nil
+		      :inherit 'markdown-pre-face
+		      :background "#3b4167")
+
+  ;; (set-face-attribute 'org-inline-src-block nil
+  ;; 		      :background "#2d314e")
   
   (defun Angelique!--org-last-modified ()
     "Insert or update the #+LAST_MODIFIED: line at point."
@@ -1431,11 +1392,11 @@ Or, insert both after #+AUTHOR: if needed."
     "Transient layout for easier Org navigation."
     ["Angelique! Org-navigation..."
      ["Org-roam"
-      ("a" "org-roam-node-find" org-roam-node-find)
+      ("c" "org-roam-node-find" org-roam-node-find)
       ("r" "org-roam-node-insert" org-roam-node-insert)
       ("s" "org-roam-buffer-toggle" org-roam-buffer-toggle)
-      ("t" "org-roam-ui-open" org-roam-ui-open)
-      ("g" "org-roam-db-sync" org-roam-db-sync)]
+      ("u" "org-roam-ui-open" org-roam-ui-open)
+      ("b" "org-roam-db-sync" org-roam-db-sync)]
      ["Babel & setting properties"
       ("e" "org-babel-tangle" org-babel-tangle)
       ("i" "org-insert-block-template" org-insert-block-template)
@@ -1536,6 +1497,8 @@ Or, insert both after #+AUTHOR: if needed."
   :ensure t
   :after org
   :custom
+  (org-roam-completion-functions t)
+  (org-roam-file-extensions '("org" "md"))
   (org-roam-directory (file-truename "~/.emacs.d/Angelique!/庭園の王女/"))
   (org-roam-extract-new-file-path "${slug}.org")
   (org-roam-capture-templates '(("d" "default" plain "%?"
@@ -1580,6 +1543,15 @@ Or, insert both after #+AUTHOR: if needed."
 ;;  Other programming modes here...
 ;; ============================================================================
 
+(use-package c-ts-mode
+  :ensure nil
+  :custom
+  (c-ts-mode-indent-style 'linux)
+  (c-ts-mode-indent-offset 8)
+  :hook
+  (c-ts-mode . (lambda ()
+		 (setq-local indent-tabs-mode nil))))
+
 (use-package ess
   :ensure t)
 
@@ -1599,18 +1571,14 @@ Or, insert both after #+AUTHOR: if needed."
 (use-package python
   :ensure nil
   :config
+  (setq python-shell-interpreter "/usr/bin/ipython")
   ;; (if (executable-find "~/.venv/bin/ipython3")
   ;;     (setq python-shell-interpreter "~/.venv/bin/ipython3")
   ;;   (setq python-shell-interpreter "~/.venv/bin/python3.13"))
   )
 
-;; ============================================================================
-;;  gptel goes here...
-;; ============================================================================
-
-(use-package gptel
-  :ensure t
-  :defer 2)
+(use-package glsl-mode
+  :ensure t)
 
 ;; ============================================================================
 ;;  nov.el...for epub support here...
