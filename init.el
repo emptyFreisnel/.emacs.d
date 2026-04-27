@@ -145,11 +145,6 @@ If you experience stuttering, increase this.")
   :ensure t
   :hook (elpaca-after-init . doom-modeline-mode))
 
-(use-package indent-bars
-  :ensure t
-  :defer 1
-  :hook ((prog-mode) . indent-bars-mode))
-
 (use-package rainbow-delimiters
   :ensure t
   :defer 1
@@ -194,6 +189,7 @@ If you experience stuttering, increase this.")
   (ibuffer-project-use-cache t)
   ;; Lovingly taken and amended from
   ;; https://github.com/seagle0128/.emacs.d/blob/master/lisp/init-ibuffer.el
+  ;; which enriches ibuffer to be more cute and have icons
   (ibuffer-project-root-functions
    `((ibuffer-project-project-root
       . ,(concat (nerd-icons-octicon "nf-oct-repo"
@@ -225,7 +221,6 @@ If you experience stuttering, increase this.")
 
 ;; ============================================================================
 ;;  Dashboard...because emacs needs to be cute!!!
-;;  Need to see about enlight...but maybe create my own someday?
 ;; ============================================================================
 
 (use-package dashboard
@@ -807,10 +802,6 @@ If there are more than two windows, separate them with a separator."
   :ensure t
   :after magit)
 
-(use-package consult-gh
-  :ensure t
-  :defer 2)
-
 (use-package symbol-overlay
   :ensure t
   :bind ("M-t" . symbol-overlay-put)
@@ -999,7 +990,7 @@ If there are more than two windows, separate them with a separator."
   :ensure t
   :defer 2
   :custom
-  (helpful-max-buffers 2)
+  (helpful-max-buffers 1)
   :bind
   ("C-h f" . helpful-callable)
   ("C-h v" . helpful-variable)
@@ -1136,6 +1127,7 @@ If there are more than two windows, separate them with a separator."
   :config
   (setq completion-category-overrides '((eglot (styles orderless))
 					(eglot-capf (styles orderless))))
+  (setq eglot-ignored-server-capabilities '(:semanticTokensProvider))
   (advice-add 'eglot-completion-at-point :around #'cape-wrap-buster)
   :init
   (defun eglot-setup-completion ()
@@ -1151,6 +1143,7 @@ If there are more than two windows, separate them with a separator."
     python-ts-mode
     c-ts-mode
     c++-ts-mode
+    csharp-ts-mode
     rust-ts-mode) . eglot-ensure))
 
 (use-package eldoc-box
@@ -1285,36 +1278,17 @@ Temporarily disables read-only so Corfu/Cape can insert."
 
 (add-to-list 'auto-mode-alist '("\\.pdf\\'" . pdf-view-mode))
 
-;; ============================================================================
-;;  Configure Dired / dirvish.
-;; ============================================================================
 
-(use-package dirvish
-  :ensure t
-  :init
-  (dirvish-override-dired-mode)
-  :bind (("C-x j" . dired-jump)
-	 ("C-x C-j" . dired-jump-other-window)
-	 :map dirvish-mode-map
-	 ("<tab>" . dirvish-subtree-toggle)
-	 ("TAB" . dirvish-subtree-toggle))
+(use-package font-lock
+  :ensure nil
   :config
-  (set-face-attribute 'dirvish-hl-line nil
-		      :inherit nil)
-  (set-face-attribute 'dired-directory nil
-		      :inherit font-lock-doc-markup-face
-		      :foreground "#FBA0E3")
-  (setq dirvish-mode-line-format
-	'(:left (sort symlink) :right (omit yank index)))
-  (setq dirvish-attributes
-	'(nerd-icons git-msg file-time file-size collapse subtree-state vc-state))
-  (setq delete-by-moving-to-trash t)
-  (setq dired-listing-switches
-	"-l --almost-all --human-readable --group-directories-first --no-group")
-  :hook
-  (dired-mode . (lambda () (set-face-attribute 'dirvish-file-time nil
-					       :inherit nil
-					       :foreground "#A875FF"))))
+  (set-face-attribute 'font-lock-type-face nil
+		      :family "Iosevka Monokai-Theme"
+		      :slant 'italic))
+
+;; ============================================================================
+;;  Configure Dired.
+;; ============================================================================
 
 (use-package trashed
   :ensure t
