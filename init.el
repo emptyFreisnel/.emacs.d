@@ -475,8 +475,6 @@ inherit the customisations properly."
     ("u" "winner-undo" winner-undo :transient t)]
    ["eglot"
     ("e" "eglot-code-actions" eglot-code-actions)]
-   ["tree-sitter"
-    ("t" "treesit-explore" treesit-explore)]
    ["code-cells"
     ("C" "code-cells-eval" code-cells-eval)]
    ["Misc"
@@ -840,8 +838,35 @@ If there are more than two windows, separate them with a separator."
   :ensure nil
   :custom
   (compilation-ask-about-save nil)
+  :config
+  (defun blah (buffer access)
+    "BUFFER ACCESS."
+    (with-current-buffer buffer
+      (save-excursion
+	(goto-char (point-min))
+	(while (not (eobp))
+	  (let* ((msg (get-text-property (point) 'compilation-message)))
+	    (when msg
+              (let* ((loc (compilation--message->loc msg))
+		     (line (compilation--loc->line loc))
+		     (file (caar (compilation--loc->file-struct loc)))
+		     (fn-name (with-temp-buffer
+				(insert-file-contents file)
+				(c-ts-mode)
+				(goto-line line)
+				(which-function))))
+		(when fn-name
+		  (let* ((ov (make-overlay (line-beginning-position) (1+ (line-beginning-position))))
+			 (text (format "%-30s | " (if (> (length fn-name) 30)
+						      (concat (substring fn-name 0 27) "...")
+						    fn-name))))
+		    (overlay-put ov 'before-string
+				 (propertize text 'face 'font-lock-function-name-face))
+		    (overlay-put ov 'evaporate t))))))
+	  (forward-line)))))
   :hook
-  (compilation-filter . ansi-color-compilation-filter))
+  (compilation-filter . ansi-color-compilation-filter)
+  (compilation-finish-functions . blah))
 
 (use-package comint
   :ensure nil
