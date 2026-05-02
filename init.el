@@ -5,44 +5,46 @@
 
 ;; Setup package manager...using Elpaca.
 ;; Do remember to update the packages using elpaca-update.
+;; Note to always use the latest elpaca bootstrap code when rebuilding Emacs.
 
 ;;; Code:
-(defvar elpaca-installer-version 0.10)
+
+(defvar elpaca-installer-version 0.12)
 (defvar elpaca-directory (expand-file-name "elpaca/" user-emacs-directory))
 (defvar elpaca-builds-directory (expand-file-name "builds/" elpaca-directory))
-(defvar elpaca-repos-directory (expand-file-name "repos/" elpaca-directory))
+(defvar elpaca-sources-directory (expand-file-name "sources/" elpaca-directory))
 (defvar elpaca-order '(elpaca :repo "https://github.com/progfolio/elpaca.git"
-			      :ref nil :depth 1 :inherit ignore
-			      :files (:defaults "elpaca-test.el" (:exclude "extensions"))
-			      :build (:not elpaca--activate-package)))
-(let* ((repo  (expand-file-name "elpaca/" elpaca-repos-directory))
+                              :ref nil :depth 1 :inherit ignore
+                              :files (:defaults "elpaca-test.el" (:exclude "extensions"))
+                              :build (:not elpaca-activate)))
+(let* ((repo  (expand-file-name "elpaca/" elpaca-sources-directory))
        (build (expand-file-name "elpaca/" elpaca-builds-directory))
        (order (cdr elpaca-order))
        (default-directory repo))
   (add-to-list 'load-path (if (file-exists-p build) build repo))
   (unless (file-exists-p repo)
     (make-directory repo t)
-    (when (< emacs-major-version 28) (require 'subr-x))
+    (when (<= emacs-major-version 28) (require 'subr-x))
     (condition-case-unless-debug err
-	(if-let* ((buffer (pop-to-buffer-same-window "*elpaca-bootstrap*"))
-		  ((zerop (apply #'call-process `("git" nil ,buffer t "clone"
-						  ,@(when-let* ((depth (plist-get order :depth)))
-						      (list (format "--depth=%d" depth) "--no-single-branch"))
-						  ,(plist-get order :repo) ,repo))))
-		  ((zerop (call-process "git" nil buffer t "checkout"
-					(or (plist-get order :ref) "--"))))
-		  (emacs (concat invocation-directory invocation-name))
-		  ((zerop (call-process emacs nil buffer nil "-Q" "-L" "." "--batch"
-					"--eval" "(byte-recompile-directory \".\" 0 'force)")))
-		  ((require 'elpaca))
-		  ((elpaca-generate-autoloads "elpaca" repo)))
-	    (progn (message "%s" (buffer-string)) (kill-buffer buffer))
-	  (error "%s" (with-current-buffer buffer (buffer-string))))
+        (if-let* ((buffer (pop-to-buffer-same-window "*elpaca-bootstrap*"))
+                  ((zerop (apply #'call-process `("git" nil ,buffer t "clone"
+                                                  ,@(when-let* ((depth (plist-get order :depth)))
+                                                      (list (format "--depth=%d" depth) "--no-single-branch"))
+                                                  ,(plist-get order :repo) ,repo))))
+                  ((zerop (call-process "git" nil buffer t "checkout"
+                                        (or (plist-get order :ref) "--"))))
+                  (emacs (concat invocation-directory invocation-name))
+                  ((zerop (call-process emacs nil buffer nil "-Q" "-L" "." "--batch"
+                                        "--eval" "(byte-recompile-directory \".\" 0 'force)")))
+                  ((require 'elpaca))
+                  ((elpaca-generate-autoloads "elpaca" repo)))
+            (progn (message "%s" (buffer-string)) (kill-buffer buffer))
+          (error "%s" (with-current-buffer buffer (buffer-string))))
       ((error) (warn "%s" err) (delete-directory repo 'recursive))))
   (unless (require 'elpaca-autoloads nil t)
     (require 'elpaca)
     (elpaca-generate-autoloads "elpaca" repo)
-    (load "./elpaca-autoloads")))
+    (let ((load-source-file-function nil)) (load "./elpaca-autoloads"))))
 (add-hook 'after-init-hook #'elpaca-process-queues)
 (elpaca `(,@elpaca-order))
 
@@ -77,32 +79,13 @@ If you experience stuttering, increase this.")
 	    (add-hook 'minibuffer-exit-hook #'gc-minibuffer-exit-hook)))
 
 ;; ============================================================================
-;;  Setting up use-package
+;;  Setting up use-package for profiler
 ;; ============================================================================
 
 (use-package use-package
   :ensure nil
   :custom
   (use-package-compute-statistics t))
-
-;; ============================================================================
-;;  Compile-angel to make sure packages are natively compiled.
-;;  this package actually makes my emacs initialise slower...
-;;  so i only activate it when there is a new package(s).
-;; ============================================================================
-
-(use-package compile-angel
-  :ensure t
-  :commands compile-angel-on-load-mode
-  ;; :demand t
-  :config
-  (setq compile-angel-verbose t) ;; set to nil to silence compile-angel.
-  (push "init.el" compile-angel-excluded-files)
-  (push "early-init.el" compile-angel-excluded-files)
-  (push "Angelique!.el" compile-angel-excluded-files)
-  (push "~/.emacs.d/var/recentf-save.el" compile-angel-excluded-files)
-  (compile-angel-on-load-mode)
-  (add-hook 'emacs-lisp-mode-hook #'compile-angel-on-save-local-mode))
 
 ;; ============================================================================
 ;;  A clean emacs is a happy emacs! which makes ya girl happy!
@@ -131,6 +114,17 @@ If you experience stuttering, increase this.")
   :init
   (add-to-list 'corfu-margin-formatters #'nerd-icons-corfu-formatter))
 
+(use-package nerd-icons-dired
+  :ensure t
+  :after dired
+  :hook
+  (dired-mode . nerd-icons-dired-mode))
+
+(use-package nerd-icons-ibuffer
+  :ensure t
+  :after ibuffer
+  :hook (ibuffer-mode . nerd-icons-ibuffer-mode))
+
 (use-package doom-themes
   :ensure t
   :commands doom-themes-visual-bell-config
@@ -155,11 +149,6 @@ If you experience stuttering, increase this.")
   :defer 1
   :hook ((prog-mode
 	  org-mode) . colorful-mode))
-
-(use-package info-colors
-  :ensure t
-  :config
-  (add-hook 'Info-selection-hook 'info-colors-fontify-node))
 
 ;; ============================================================================
 ;;  Ibuffer customizations.
@@ -214,10 +203,6 @@ If you experience stuttering, increase this.")
     (unless (eq ibuffer-sorting-mode 'project-file-relative)
       (ibuffer-do-sort-by-project-file-relative)))
   :hook (ibuffer . ibuffer-project-function))
-
-(use-package nerd-icons-ibuffer
-  :ensure t
-  :hook (ibuffer-mode . nerd-icons-ibuffer-mode))
 
 ;; ============================================================================
 ;;  Dashboard...because emacs needs to be cute!!!
@@ -605,38 +590,36 @@ This is preferably activated through Angelique!--window-control!"
       (window-parameters. ((no-other-window . t)
 			   (mode-line-format . none)))))))
 
-(use-package window-x
-  :ensure nil
+(use-package rotate
+  :ensure t
   :config
   (transient-define-prefix Angelique!--window-control! ()
     "A better interface for window resizing and layout control."
     ;; this is to prevent transient from exiting after command input.
-    :transient-suffix 'transient--do-stay
     ["Angelique! window control..."
      ["Rotate"
-      ("n" "rotate-windows" rotate-windows)
-      ("e" "rotate-windows-back" rotate-windows-back)
-      ("i" "window-layout-rotate-clockwise" window-layout-rotate-clockwise)
-      ("o" "window-layout-rotate-anticlockwise" window-layout-rotate-anticlockwise)]
+      ("n" "rotate:main-vertical" rotate:main-vertical)
+      ("e" "rotate:main-horizontal" rotate:main-horizontal)
+      ("i" "rotate:even-vertical" rotate:even-vertical)
+      ("o" "rotate:even-horizontal" rotate:even-horizontal)]
      ["Flip & Transpose"
-      ("l" "window-layout-flip-leftright" window-layout-flip-leftright)
-      ("u" "window-layout-flip-topdown" window-layout-flip-topdown)
-      ("y" "window-layout-transpose" window-layout-transpose)]
+      ("l" "rotate-window" (lambda () (interactive) (rotate-window) (Angelique!--window-control!)))
+      ("u" "rotate-layout" (lambda () (interactive) (rotate-layout) (Angelique!--window-control!)))]
      ["Splitting & Closing"
-      ("s" "split-window-right" split-window-right :transient nil)
-      ("S" "split-window-below" split-window-below :transient nil)
-      ("d" "delete-window" delete-window :transient nil)
-      ("D" "kill-buffer-and-window" kill-buffer-and-window :transient nil)]
+      ("s" "split-window-right" split-window-right)
+      ("S" "split-window-below" split-window-below)
+      ("d" "delete-window" delete-window)
+      ("D" "kill-buffer-and-window" kill-buffer-and-window)]
      ["Movement & buffer navigation."
-      ("b" "switch-to-buffer" switch-to-buffer :transient nil)
+      ("b" "switch-to-buffer" switch-to-buffer)
       ("k" "kill-buffer" kill-buffer)
       ("," "previous-buffer" previous-buffer)
       ("." "next-buffer" next-buffer)]
      ["Tabs"
-      ("t" "tab-new" tab-new :transient nil)
-      ("T" "tab-close" tab-close :transient nil)
-      ("r" "tab-bar-switch-to-tab" tab-bar-switch-to-tab :transient nil)
-      ("O" "tab-bar-move-window-to-tab" tab-bar-move-window-to-tab :transient nil)]
+      ("t" "tab-new" tab-new)
+      ("T" "tab-close" tab-close)
+      ("r" "tab-bar-switch-to-tab" tab-bar-switch-to-tab)
+      ("O" "tab-bar-move-window-to-tab" tab-bar-move-window-to-tab)]
      ["Resize & Balance"
       (";" "resize-windows" Angelique!--window-resize-transient)
       (":" "balance-windows" balance-windows)]
@@ -691,15 +674,11 @@ The DWIM behaviour of this command is as follows:
 
 (use-package time
   :ensure nil
-  :config
-  (display-time-mode 1))
+  :config (display-time-mode 1))
 
 (use-package tab-bar
   :ensure nil
   :config
-  (set-face-attribute 'tab-bar-tab-highlight nil
-		      :background "#F4B6FF")
-
   (set-face-attribute 'tab-bar-tab nil
 		      :family "VictorMono Nerd Font Mono"
 		      :slant 'italic
@@ -757,27 +736,6 @@ If there are more than two windows, separate them with a separator."
   (elpaca-after-init . tab-bar-mode)
   (tab-bar-mode . Angelique!--tab-bar-close-button))
 
-;; Occur
-(use-package replace
-  :ensure nil
-  :config
-  ;; https://www.masteringemacs.org/article/searching-buffers-occur-mode
-  (defun Angelique!--get-buffers-matching-mode (mode)
-    "Returns a list of buffers where their major-mode is equal to MODE."
-    (let ((buffer-mode-matches '()))
-      (dolist (buf (buffer-list))
-	(with-current-buffer buf
-	  (when (eq mode major-mode)
-	    (push buf buffer-mode-matches))))
-      (buffer-mode-matches)))
-
-  (defun Angelique!--multi-occur-in-this-mode ()
-    "Show all lines matching REGEXP in buffers with this major-mode."
-    (interactive)
-    (multi-occur
-     (Angelique!--get-buffers-matching-mode major-mode)
-     (car (occur-read-primary-args)))))
-
 (use-package delsel
   :ensure nil
   :hook (elpaca-after-init . delete-selection-mode))
@@ -785,7 +743,7 @@ If there are more than two windows, separate them with a separator."
 (use-package ultra-scroll
   :ensure (:host github :repo "jdtsmith/ultra-scroll")
   :init
-  (setq scroll-conservatively 101 ; important!
+  (setq scroll-conservatively 101 ;; important!
 	scroll-margin 0)
   (setq pixel-scroll-precision-interpolate-page t)
   :config (ultra-scroll-mode 1))
@@ -825,8 +783,7 @@ If there are more than two windows, separate them with a separator."
 			      :background "#4B0082"))
 
 (use-package embark-consult
-  :ensure t
-  :hook (embark-collect-mode . consult-preview-at-point-mode))
+  :ensure t)
 
 (use-package smartparens
   :ensure t
@@ -971,10 +928,6 @@ If there are more than two windows, separate them with a separator."
      (remove-hook 'pre-command-hook 'keycast--update)))
   (add-to-list 'global-mode-string '("" keycast-mode-line))
   :hook (elpaca-after-init . keycast-mode))
-
-(use-package emms
-  :ensure t
-  :defer 2)
 
 (use-package iedit
   :ensure t
@@ -1287,8 +1240,36 @@ Temporarily disables read-only so Corfu/Cape can insert."
 		      :slant 'italic))
 
 ;; ============================================================================
-;;  Configure Dired.
+;;  Configure Dired
 ;; ============================================================================
+
+(use-package dired
+  :ensure nil
+  :config
+  (set-face-attribute 'dired-directory nil
+		      :inherit font-lock-doc-markup-face
+		      :foreground "#FBA0E3")
+  (when (eq system-type 'gnu/linux)
+	(setq dired-use-ls-dired t
+	      dired-listing-switches
+	      "-l --almost-all --human-readable --group-directories-first --no-group"))
+  :custom
+  (dired-dwim-target t)
+  (dired-recursive-copies 'always)
+  (dired-create-destination-dirs 'ask)
+  (dired-clean-confirm-killing-deleted-buffers nil)
+  (dired-make-directory-clickable t)
+  (dired-mouse-drag-files t)
+  (dired-kill-when-opening-new-dired-buffer t)
+  (delete-by-moving-to-trash t)
+  :hook
+  (dired-mode . dired-hide-details-mode))
+
+(use-package dired-subtree
+  :ensure t
+  :after dired
+  :hook
+  (dired-subtree-after-insert . nerd-icons-dired--refresh))
 
 (use-package trashed
   :ensure t
@@ -1330,9 +1311,6 @@ Temporarily disables read-only so Corfu/Cape can insert."
 		      :inherit 'markdown-pre-face
 		      :background "#3b4167")
 
-  ;; (set-face-attribute 'org-inline-src-block nil
-  ;; 		      :background "#2d314e")
-  
   (defun Angelique!--org-last-modified ()
     "Insert or update the #+LAST_MODIFIED: line at point."
     (let ((insert-point (point))
@@ -1580,17 +1558,6 @@ Or, insert both after #+AUTHOR: if needed."
   :hook
   (nov-mode . (lambda ()
 		(display-line-numbers-mode -1))))
-
-;; ============================================================================
-;;  Envrc which is evaluated last in this file.
-;; ============================================================================
-
-(use-package envrc
-  :ensure t
-  :commands envrc-global-mode
-  :hook (elpaca-after-init . (lambda ()
-			       (when (executable-find "direnv")
-				 (envrc-global-mode)))))
 
 (provide 'init)
 
