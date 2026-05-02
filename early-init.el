@@ -69,7 +69,6 @@
     (add-hook 'after-make-frame-functions (lambda (frame)
 					    (select-frame frame)
 					    (funcall mode -1)))))
-
 (column-number-mode t)
 
 (size-indication-mode t)
@@ -95,6 +94,8 @@
 (minibuffer-depth-indicate-mode 1)
 
 (setq confirm-kill-emacs #'y-or-n-p)
+
+(setq which-function-mode t)
 
 ;; ============================================================================
 ;;  Startup
