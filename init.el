@@ -365,18 +365,22 @@ inherit the customisations properly."
     "Transient inteface for avy commands."
     ["Angelique! avy-commands..."
      ["Goto"
-      ("w" "avy-goto-char"
+      ("c" "avy-goto-char"
        (lambda () (interactive) (call-interactively #'avy-goto-char)))
       ("r" "avy-goto-word-1"
        (lambda () (interactive) (call-interactively #'avy-goto-word-1)))
-      ("t" "avy-goto-char-timer"
+      ("s" "avy-goto-char-timer"
        (lambda () (interactive) (call-interactively #'avy-goto-char-timer)))
-      ("l" "avy-goto-line"
+      ("t" "avy-goto-line"
        (lambda () (interactive) (call-interactively #'avy-goto-line)))]])
  
   :custom
   (avy-keys '(?c ?r ?s ?t ?b ?f ?n ?e ?i))
   (avy-timeout-seconds 0.35)
+  (avy-orders-alist '((avy-goto-word-1 . avy-order-closest)
+		      (avy-goto-char . avy-order-closest)
+		      (avy-goto-char-timer . avy-order-closest)
+		      (avy-goto-char-line . avy-order-closest)))
   (avy-dispatch-alist '((?q . avy-action-kill-move)
 			(?Q . avy-action-kill-stay)
 			(?w . avy-action-teleport)
@@ -436,7 +440,6 @@ inherit the customisations properly."
      ;; Advanced navigation.
      ("C-a" crux-move-beginning-of-line)
      ("C-e" move-end-of-line)
-     ("M-r" avy-goto-char-2)
      ("M-o" backward-sentence)
      ("M-e" forward-sentence)
      ("M-a" right-word)
@@ -576,10 +579,13 @@ This is preferably activated through Angelique!--window-control!"
   (kill-buffer-quit-windows t)
   (even-window-sizes nil)
   (display-buffer-alist
-   '(("\\`\\*\\(Help\\|helpful .*\\|Apropos\\|Occur\\|Dogears.*\\|Org.*\\)\\*\\'"
+   '(("\\`\\*\\(Help\\|helpful .*\\|Apropos\\|Occur\\|Org.*\\)\\*\\'"
       (display-buffer-at-bottom)
       (window-height . 0.35))
      ("\\*Embark Collect: .*\\*"
+      (display-buffer-at-bottom)
+      (window-height . 0.3))
+     ("\\*Async Shell Command\\*"
       (display-buffer-at-bottom)
       (window-height . 0.3))
      ("\\*Embark Actions\\*"
@@ -610,19 +616,18 @@ This is preferably activated through Angelique!--window-control!"
       ("D" "kill-buffer-and-window" kill-buffer-and-window)]
      ["Movement & buffer navigation."
       ("b" "switch-to-buffer" switch-to-buffer)
-      ("k" "kill-buffer" kill-buffer)
       ("," "previous-buffer" previous-buffer)
       ("." "next-buffer" next-buffer)]
      ["Tabs"
       ("t" "tab-new" tab-new)
       ("T" "tab-close" tab-close)
-      ("r" "tab-bar-switch-to-tab" tab-bar-switch-to-tab)
       ("O" "tab-bar-move-window-to-tab" tab-bar-move-window-to-tab)]
      ["Resize & Balance"
       (";" "resize-windows" Angelique!--window-resize-transient)
       (":" "balance-windows" balance-windows)]
      ["Misc"
-      ("C-u" "universal-argument" universal-argument)]])
+      ("C-u" "universal-argument" universal-argument)
+      ("r" "revert-buffer" revert-buffer)]])
   :bind ("M-;" . Angelique!--window-control!))
 
 (use-package ace-window
@@ -672,7 +677,14 @@ The DWIM behaviour of this command is as follows:
 
 (use-package time
   :ensure nil
-  :config (display-time-mode 1))
+  :config (display-time-mode t))
+
+(use-package which-func
+  :ensure nil
+  :config (which-function-mode t))
+
+(use-package async
+  :ensure t)
 
 (use-package tab-bar
   :ensure nil
@@ -697,8 +709,7 @@ This function concatenates nerd-icons to the tab-names.
 If there are more than two windows, separate them with a separator."
     ;;; bufs is stolen from the original tab-bar-tab-name-all.
     (let* ((bufs (delete-dups (mapcar #'window-buffer
-                                      (window-list-1 (frame-first-window)
-                                                     'nomini))))
+                                      (window-list-1 (frame-first-window) 'nomini))))
 	   (seperator (propertize "  ❤  " 'face
 				  `(:height 1.1 :weight bold :foreground "#FF70F8")))
 	   (names (mapcar (lambda (buf)
@@ -788,7 +799,6 @@ If there are more than two windows, separate them with a separator."
   :defer 1
   :config
   (smartparens-global-mode)
-  (require 'smartparens-config)
   :hook
   (minibuffer-setup . smartparens-mode))
 
@@ -839,34 +849,48 @@ If there are more than two windows, separate them with a separator."
   :custom
   (compilation-ask-about-save nil)
   :config
-  (defun blah (buffer access)
+  ;; Lovingly taken from
+  ;; https://evex.one/posts/emacs/rg-which-function/
+  (defun Angelique!--which-function-compilation-overlay (buffer access)
     "BUFFER ACCESS."
     (with-current-buffer buffer
       (save-excursion
 	(goto-char (point-min))
-	(while (not (eobp))
-	  (let* ((msg (get-text-property (point) 'compilation-message)))
-	    (when msg
-              (let* ((loc (compilation--message->loc msg))
-		     (line (compilation--loc->line loc))
-		     (file (caar (compilation--loc->file-struct loc)))
-		     (fn-name (with-temp-buffer
-				(insert-file-contents file)
-				(c-ts-mode)
-				(goto-line line)
-				(which-function))))
-		(when fn-name
-		  (let* ((ov (make-overlay (line-beginning-position) (1+ (line-beginning-position))))
-			 (text (format "%-30s | " (if (> (length fn-name) 30)
-						      (concat (substring fn-name 0 27) "...")
-						    fn-name))))
-		    (overlay-put ov 'before-string
-				 (propertize text 'face 'font-lock-function-name-face))
-		    (overlay-put ov 'evaporate t))))))
-	  (forward-line)))))
+	(let ((cache (make-hash-table :test #'equal)))
+	  (while (not (eobp))
+	    (let* ((msg (get-text-property (point) 'compilation-message)))
+	      (when msg
+		;; compilation message is a cl-defstruct
+		(let* ((loc (compilation--message->loc msg))
+		       (line (compilation--loc->line loc))
+		       (file (caar (compilation--loc->file-struct loc)))
+		       ;; very slow as expected, should look into async
+		       ;; hash table for now.
+		       (mode (assoc-default file auto-mode-alist #'string-match))
+		       (fn-name (ignore-errors (with-temp-buffer
+						 (insert-file-contents file)
+						 (when mode (funcall mode))
+						 (imenu--make-index-alist t)
+						 (goto-line line)
+						 (which-function))))
+		       (fn-name-len (if (> (length fn-name) 30)
+					(concat (substring fn-name 0 27) "...") fn-name)))
+		  (when fn-name
+		    (let* ((ov (make-overlay (line-beginning-position) (1+ (line-beginning-position))))
+			   (text (format "%-30s | " fn-name-len)))
+		      (overlay-put ov 'before-string
+				   (propertize text
+					       'face
+					       '(:inherit font-lock-function-name-face
+							  :weight normal :underline nil)
+					       'font-lock-face
+					       '(:inherit font-lock-function-name-face
+							  :weight normal :underline nil)))
+		      (overlay-put ov 'evaporate t))))))
+	    (forward-line))))))
   :hook
   (compilation-filter . ansi-color-compilation-filter)
-  (compilation-finish-functions . blah))
+  (compilation-finish-functions . Angelique!--which-function-compilation-overlay))
 
 (use-package comint
   :ensure nil
@@ -904,14 +928,12 @@ If there are more than two windows, separate them with a separator."
 
 (use-package pdf-tools
   :ensure t
+  :config
+  (add-to-list 'auto-mode-alist '("\\.pdf\\'" . pdf-view-mode))
   :hook
   (pdf-view-mode . (lambda ()
 		     (hl-line-mode nil)
 		     (display-line-numbers-mode -1))))
-
-(use-package webjump
-  :ensure nil
-  :bind ("M-s M-e" . webjump))
 
 (use-package consult
   :ensure t
@@ -1033,8 +1055,7 @@ If there are more than two windows, separate them with a separator."
   :hook (elpaca-after-init . savehist-mode))
 
 ;; ============================================================================
-;;  LSP completions go here... using eglot. removed lsp-mode as i wanna
-;;  go as built-in as possible for the time being.
+;;  LSP completions go here... using eglot.
 ;; ============================================================================
 
 (use-package cape
@@ -1076,43 +1097,19 @@ If there are more than two windows, separate them with a separator."
     (corfu-history-mode 1)
     (add-to-list 'savehist-additional-variables 'corfu-history)))
 
-(use-package tempel
-  :ensure t
-  :init
-  ;; Setup completion at point
-  (defun tempel-setup-capf ()
-    ;; Add the Tempel Capf to `completion-at-point-functions'.
-    ;; `tempel-expand' only triggers on exact matches. Alternatively use
-    ;; `tempel-complete' if you want to see all matches, but then you
-    ;; should also configure `tempel-trigger-prefix', such that Tempel
-    ;; does not trigger too often when you don't expect it. NOTE: We add
-    ;; `tempel-expand' *before* the main programming mode Capf, such
-    ;; that it will be tried first.
-    (setq-local completion-at-point-functions
-		(cons #'tempel-complete
-		      completion-at-point-functions)))
-  :hook
-  ((prog-mode
-    conf-mode
-    text-mode) . tempel-setup-capf))
-
-(use-package tempel-collection
-  :ensure t
-  :after tempel)
-
 (use-package eglot
   :ensure nil
+  :custom
+  (completion-category-overrides '((eglot (styles orderless))
+   				   (eglot-capf (styles orderless))))
+  (eglot-ignored-server-capabilities '(:semanticTokensProvider))
   :config
-  (setq completion-category-overrides '((eglot (styles orderless))
-					(eglot-capf (styles orderless))))
-  (setq eglot-ignored-server-capabilities '(:semanticTokensProvider))
   (advice-add 'eglot-completion-at-point :around #'cape-wrap-buster)
   :init
   (defun eglot-setup-completion ()
     (setq-local completion-at-point-functions
 		(list (cape-capf-super
 		       #'eglot-completion-at-point
-		       #'tempel-complete
 		       #'cape-file
 		       #'cape-dabbrev))))
   :hook
@@ -1144,7 +1141,8 @@ If there are more than two windows, separate them with a separator."
   ;; getting annoyed by all the warnings flymake is generating
   ;; because of the byte-compiler. so turning it off for peace of mind...
   (emacs-lisp-mode . (lambda ()
-			 (remove-hook 'flymake-diagnostic-functions #'elisp-flymake-byte-compile t))))
+		       (remove-hook 'flymake-diagnostic-functions
+				    #'elisp-flymake-byte-compile t))))
 
 (use-package flymake-ruff
   :ensure t
@@ -1188,11 +1186,10 @@ If there are more than two windows, separate them with a separator."
   (minibuffer-setup . completion-preview-mode))
 
 (defun elisp-super-capf ()
-  "Unifies `tempel-complete' with `elisp-completion-at-point' for elisp editing.
+  "Unifies `elisp-completion-at-point' for elisp editing.
 This is done using `cape-capf-super'."
   (setq-local completion-at-point-functions
 	      (list (cape-capf-super
-		     #'tempel-complete
 		     #'elisp-completion-at-point
 		     #'cape-dabbrev))))
 
@@ -1224,8 +1221,8 @@ Temporarily disables read-only so Corfu/Cape can insert."
 ;; remember to have codelldb
 (use-package dape
   :ensure t
-  :config
-  (setq dape-request-timeout 30))
+  :custom
+  (dape-request-timeout 30))
 
 ;; ============================================================================
 ;;  Treesitter...and configuring the modes to the correct ones...
@@ -1233,18 +1230,8 @@ Temporarily disables read-only so Corfu/Cape can insert."
 
 (use-package treesit
   :ensure nil
-  :custom
-  (treesit-font-lock-level 4)
-  (treesit-load-name-override-list '((c-sharp "libtree-sitter-csharp" "tree_sitter_c_sharp")))
-  (treesit-extra-load-path '("~/.emacs.d/tree-sitter/"))
-  :hook
-  ((c-ts-mode
-    c++-ts-mode
-    csharp-ts-mode
-    rust-ts-mode
-    python-ts-mode) . treesit-inspect-mode))
-
-(dolist (pair
+  :config
+  (dolist (pair
 	 '((c-mode . c-ts-mode)
 	   (c++-mode . c++-ts-mode)
 	   (csharp-mode . csharp-ts-mode)
@@ -1253,9 +1240,10 @@ Temporarily disables read-only so Corfu/Cape can insert."
 	   (js-json-mode . json-ts-mode)
 	   (js-mode . js-ts-mode)))
   (add-to-list 'major-mode-remap-alist pair))
-
-(add-to-list 'auto-mode-alist '("\\.pdf\\'" . pdf-view-mode))
-
+  :custom
+  (treesit-font-lock-level 4)
+  (treesit-load-name-override-list '((c-sharp "libtree-sitter-csharp" "tree_sitter_c_sharp")))
+  (treesit-extra-load-path '("~/.emacs.d/tree-sitter/")))
 
 (use-package font-lock
   :ensure nil
@@ -1293,6 +1281,9 @@ Temporarily disables read-only so Corfu/Cape can insert."
 (use-package dired-subtree
   :ensure t
   :after dired
+  :bind (:map dired-mode-map
+	      ("<tab>" . dired-subtree-toggle)
+	      ("TAB" . dired-subtree-toggle))
   :hook
   (dired-subtree-after-insert . nerd-icons-dired--refresh))
 
@@ -1541,6 +1532,7 @@ Or, insert both after #+AUTHOR: if needed."
 
 (use-package code-cells
   :ensure t
+  :defer t
   :hook
   ((python-mode
     python-ts-mode) . code-cells-mode-maybe))
