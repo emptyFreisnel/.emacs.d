@@ -65,9 +65,7 @@ If you experience stuttering, increase this.")
 	  (lambda ()
 	    (if (boundp 'after-focus-change-function)
 		(add-function :after after-focus-change-function
-			      (lambda ()
-				(unless (frame-focus-state)
-				  (garbage-collect))))
+			      (lambda () (unless (frame-focus-state) (garbage-collect))))
 	      (add-hook 'after-focus-change-function 'garbage-collect))
 	    (defun gc-minibuffer-setup-hook ()
 	      (setq gc-cons-threshold (* init-gc-cons-threshold 2)))
@@ -360,20 +358,21 @@ inherit the customisations properly."
       (goto-char pt)
       (helpful-at-point))
     (select-window (cdr (ring-ref avy-ring 0))) t)
-  
-  (transient-define-prefix Angelique!--avy-commands ()
-    "Transient inteface for avy commands."
-    ["Angelique! avy-commands..."
-     ["Goto"
-      ("c" "avy-goto-char"
-       (lambda () (interactive) (call-interactively #'avy-goto-char)))
-      ("r" "avy-goto-word-1"
-       (lambda () (interactive) (call-interactively #'avy-goto-word-1)))
-      ("s" "avy-goto-char-timer"
-       (lambda () (interactive) (call-interactively #'avy-goto-char-timer)))
-      ("t" "avy-goto-line"
-       (lambda () (interactive) (call-interactively #'avy-goto-line)))]])
- 
+
+  (with-eval-after-load 'transient
+    (transient-define-prefix Angelique!--avy-commands ()
+      "Transient inteface for avy commands."
+      ["Angelique! avy-commands..."
+       ["Goto"
+	("c" "avy-goto-char"
+	 (lambda () (interactive) (call-interactively #'avy-goto-char)))
+	("r" "avy-goto-word-1"
+	 (lambda () (interactive) (call-interactively #'avy-goto-word-1)))
+	("s" "avy-goto-char-timer"
+	 (lambda () (interactive) (call-interactively #'avy-goto-char-timer)))
+	("t" "avy-goto-line"
+	 (lambda () (interactive) (call-interactively #'avy-goto-line)))]]))
+
   :custom
   (avy-keys '(?c ?r ?s ?t ?b ?f ?n ?e ?i))
   (avy-timeout-seconds 0.35)
@@ -458,49 +457,47 @@ inherit the customisations properly."
      ;; Misc
      ("M-i" nil "Quit"))))
 
+(defmacro Angelique!--compile-template (name compile-func)
+  "Macro to have compilation / recompilation to take inputs.
+`NAME' is the template for the function name and `COMPILE-FUNC'
+is the template for the functions`compile' and `recompile'."
+  `(defun ,name ()
+     (interactive (let* ((current-prefix-arg '(4)))
+		    (call-interactively #',compile-func)))))
+
 (defun Angelique!--universal-compile ()
   "Invoke the `compile' command with prefix arg programmatically."
   (interactive)
   (let* ((current-prefix-arg '(4)))
     (call-interactively #'compile)))
 
-(transient-define-prefix Angelique!--easy-commands ()
-  "Transient layout for commands that has very frequent use."
-  ["Angelique! easy-commands..."
-   ["Shell & Compile"
-    ("v" "vterm" vterm)
-    ("V" "vterm-other-window" vterm-other-window)
-    ("E" "eshell" eshell)
-    ("c" "compile" compile)
-    ("r" "recompile" recompile)
-    ("a" "Angelique!--universal-compile" Angelique!--universal-compile)]
-   ["winner-undo"
-    ("u" "winner-undo" winner-undo :transient t)]
-   ["eglot"
-    ("e" "eglot-code-actions" eglot-code-actions)]
-   ["code-cells"
-    ("C" "code-cells-eval" code-cells-eval)]
-   ["Misc"
-    ("C-u" "universal-argument" universal-argument)
-    ("M" "view-echo-area-messages" view-echo-area-messages)
-    ("s" "scratch-buffer" scratch-buffer)]])
+(with-eval-after-load 'transient
+  (transient-define-prefix Angelique!--easy-commands ()
+    "Transient layout for commands that has very frequent use."
+    ["Angelique! easy-commands..."
+     ["Shell & Compile"
+      ("v" "vterm" vterm)
+      ("V" "vterm-other-window" vterm-other-window)
+      ("E" "eshell" eshell)
+      ("c" "compile" compile)
+      ("r" "recompile" recompile)
+      ("a" "Angelique!--universal-compile" Angelique!--universal-compile)]
+     ["winner-undo"
+      ("u" "winner-undo" winner-undo :transient t)]
+     ["eglot"
+      ("e" "eglot-code-actions" eglot-code-actions)]
+     ["code-cells"
+      ("C" "code-cells-eval" code-cells-eval)]
+     ["Misc"
+      ("C-u" "universal-argument" universal-argument)
+      ("M" "view-echo-area-messages" view-echo-area-messages)
+      ("t" "symbol-overlay-put" symbol-overlay-put)
+      ("s" "scratch-buffer" scratch-buffer)]]))
 
-(defun Angelique!--move-line-up ()
-  "Move line up."
-  (interactive)
-  (transpose-lines 1)
-  (forward-line -2))
-
-(defun Angelique!--move-line-down ()
-  "Move line down."
-  (interactive)
-  (forward-line 1)
-  (transpose-lines 1)
-  (forward-line -1))
+(use-package move-text
+  :ensure t)
 
 (define-key global-map (kbd "C-c c") 'Angelique!--easy-commands)
-(define-key global-map (kbd "M-<up>") 'Angelique!--move-line-up)
-(define-key global-map (kbd "M-<down>") 'Angelique!--move-line-down)
 
 ;; additional defined keys here...
 (define-key global-map (kbd "C-M-c") 'treesit-up-list)
@@ -510,10 +507,6 @@ inherit the customisations properly."
 ;; disabled commands go here...
 (define-key global-map (kbd "C-x m") nil)
 (define-key global-map (kbd "C-x n n") nil)
-
-(with-eval-after-load 'comint
-  (define-key comint-mode-map (kbd "M-f") #'comint-history-isearch-backward-regexp)
-  (define-key comint-mode-map (kbd "M-r") nil))
 
 ;; ============================================================================
 ;;  Prevent the cursor from going into the minibuffer prompt.
@@ -541,7 +534,7 @@ inherit the customisations properly."
   (setq precision-number (max 1 arg)))
 
 (defmacro Angelique!--resize-cmd (name window-func)
-  "Resize window using multipliers.
+  "Macro to resize window using multipliers.
 `NAME' is the template for the function name and `WINDOW-FUNC'
 is the template for one of the following functions:
 `enlarge-window',
@@ -553,28 +546,33 @@ is the template for one of the following functions:
      (interactive)
      (,window-func (* base-number precision-number))))
 
-(Angelique!--resize-cmd Angelique!--enlarge-window-horizontally enlarge-window-horizontally)
-(Angelique!--resize-cmd Angelique!--enlarge-window enlarge-window)
-(Angelique!--resize-cmd Angelique!--shrink-window shrink-window)
-(Angelique!--resize-cmd Angelique!--shrink-window-horizontally shrink-window-horizontally)
+(Angelique!--resize-cmd Angelique!--enlarge-window-horizontally
+			enlarge-window-horizontally)
+(Angelique!--resize-cmd Angelique!--enlarge-window
+			enlarge-window)
+(Angelique!--resize-cmd Angelique!--shrink-window
+			shrink-window)
+(Angelique!--resize-cmd Angelique!--shrink-window-horizontally
+			shrink-window-horizontally)
 
 (use-package window
   :ensure nil
   :config
-  (transient-define-prefix Angelique!--window-resize-transient ()
-    "Transient layout for minute resizing of windows.
+  (with-eval-after-load 'transient
+    (transient-define-prefix Angelique!--window-resize-transient ()
+      "Transient layout for minute resizing of windows.
 This is preferably activated through Angelique!--window-control!"
-    ;; this is to prevent transient from exiting after command input.
-    :transient-suffix 'transient--do-stay
-    ["Resize windows..."
-     ["Parameters"
-      ("u" "set-base-number" set-base-number)
-      ("y" "set-precision-number" set-precision-number)]
-     ["Resize"
-      ("n" "Widen"Angelique!--enlarge-window-horizontally)
-      ("e" "Heighten" Angelique!--enlarge-window)
-      ("i" "Shrink" Angelique!--shrink-window)
-      ("o" "Narrow" Angelique!--shrink-window-horizontally)]])
+      ;; this is to prevent transient from exiting after command input.
+      :transient-suffix 'transient--do-stay
+      ["Resize windows..."
+       ["Parameters"
+	("u" "set-base-number" set-base-number)
+	("y" "set-precision-number" set-precision-number)]
+       ["Resize"
+	("n" "Widen"Angelique!--enlarge-window-horizontally)
+	("e" "Heighten" Angelique!--enlarge-window)
+	("i" "Shrink" Angelique!--shrink-window)
+	("o" "Narrow" Angelique!--shrink-window-horizontally)]]))
   :custom
   (kill-buffer-quit-windows t)
   (even-window-sizes nil)
@@ -594,21 +592,27 @@ This is preferably activated through Angelique!--window-control!"
       (window-parameters. ((no-other-window . t)
 			   (mode-line-format . none)))))))
 
-(use-package rotate
+(use-package transpose-frame
   :ensure t
   :config
-  (transient-define-prefix Angelique!--window-control! ()
+  (with-eval-after-load 'transient
+    (transient-define-prefix Angelique!--window-control! ()
     "A better interface for window resizing and layout control."
-    ;; this is to prevent transient from exiting after command input.
     ["Angelique! window control..."
      ["Rotate"
-      ("n" "rotate:main-vertical" rotate:main-vertical)
-      ("e" "rotate:main-horizontal" rotate:main-horizontal)
-      ("i" "rotate:even-vertical" rotate:even-vertical)
-      ("o" "rotate:even-horizontal" rotate:even-horizontal)]
+      ("n" "rotate-frame"
+       (lambda () (interactive) (rotate-frame) (Angelique!--window-control!)))
+      ("e" "rotate-frame-clockwise"
+       (lambda () (interactive) (rotate-frame-clockwise) (Angelique!--window-control!)))
+      ("i" "rotate-frame-anticlockwise"
+       (lambda () (interactive) (rotate-frame-anticlockwise) (Angelique!--window-control!)))]
      ["Flip & Transpose"
-      ("l" "rotate-window" (lambda () (interactive) (rotate-window) (Angelique!--window-control!)))
-      ("u" "rotate-layout" (lambda () (interactive) (rotate-layout) (Angelique!--window-control!)))]
+      ("w" "transpose-frame"
+       (lambda () (interactive) (transpose-frame) (Angelique!--window-control!)))
+      ("l" "flip-frame"
+       (lambda () (interactive) (flip-frame) (Angelique!--window-control!)))
+      ("y" "flop-frame"
+       (lambda () (interactive) (flop-frame) (Angelique!--window-control!)))]
      ["Splitting & Closing"
       ("s" "split-window-right" split-window-right)
       ("S" "split-window-below" split-window-below)
@@ -627,7 +631,7 @@ This is preferably activated through Angelique!--window-control!"
       (":" "balance-windows" balance-windows)]
      ["Misc"
       ("C-u" "universal-argument" universal-argument)
-      ("r" "revert-buffer" revert-buffer)]])
+      ("r" "revert-buffer" revert-buffer)]]))
   :bind ("M-;" . Angelique!--window-control!))
 
 (use-package ace-window
@@ -771,7 +775,6 @@ If there are more than two windows, separate them with a separator."
 
 (use-package symbol-overlay
   :ensure t
-  :bind ("M-t" . symbol-overlay-put)
   :config
   (require 'symbol-overlay)
   (set-face-attribute 'symbol-overlay-default-face nil
@@ -811,8 +814,8 @@ If there are more than two windows, separate them with a separator."
   :commands (vterm vterm-other-window
 		   vterm-module-compile
 		   vterm-next-error-function)
-  :config
-  (setq vterm-timer-delay nil)
+  :custom
+  (vterm-timer-delay nil)
   :hook
   (vterm-mode . (lambda ()
 		  (hl-line-mode nil)
@@ -844,19 +847,46 @@ If there are more than two windows, separate them with a separator."
 		   (hl-line-mode nil)
 		   (display-line-numbers-mode -1))))
 
+(defvar Angelique!--buffer-cache (make-hash-table :test #'equal)
+  "Persistent cache to map file names to the following plist.")
+
 (use-package compile
   :ensure nil
   :custom
+  (compile-command nil)
   (compilation-ask-about-save nil)
   :config
-  ;; Lovingly taken from
-  ;; https://evex.one/posts/emacs/rg-which-function/
+  (defun Angelique!--get-cached-buffer (file mode)
+    (let* ((cached (gethash file Angelique!--buffer-cache))
+	   (mtime (file-attribute-modification-time (file-attributes file))))
+      (if (and cached (equal (cdr cached) mtime))
+	  (progn (message "Angelique!: Referring to cached %s" file)
+		 (car cached))
+	(progn
+	  (when cached (kill-buffer (car cached)))
+	  (let ((b (generate-new-buffer file)))
+	    (with-current-buffer b
+	      (condition-case-unless-debug err
+		  (progn
+		    (insert-file-contents file)
+		    (when mode (funcall mode))
+		    (imenu--make-index-alist t)
+		    ;; (goto-line line)
+		    ;; (which-function)
+		    )
+		(error (message "Angelique!: skipping %s: %s" file (error-message-string err))))
+	      (puthash file (cons b mtime) Angelique!--buffer-cache))
+	    b)))))
+
   (defun Angelique!--which-function-compilation-overlay (buffer access)
-    "BUFFER ACCESS."
+    (message "Angelique!: overlay called!!")
     (with-current-buffer buffer
       (save-excursion
+	;; jit lock fontification is lazily evaluated; ensure font-lock so that
+	;; the overlay can render properly when command is invoked in another buffer
+	;; other than compilation-mode
+	(font-lock-ensure)
 	(goto-char (point-min))
-	(let ((cache (make-hash-table :test #'equal)))
 	  (while (not (eobp))
 	    (let* ((msg (get-text-property (point) 'compilation-message)))
 	      (when msg
@@ -864,15 +894,9 @@ If there are more than two windows, separate them with a separator."
 		(let* ((loc (compilation--message->loc msg))
 		       (line (compilation--loc->line loc))
 		       (file (caar (compilation--loc->file-struct loc)))
-		       ;; very slow as expected, should look into async
-		       ;; hash table for now.
 		       (mode (assoc-default file auto-mode-alist #'string-match))
-		       (fn-name (ignore-errors (with-temp-buffer
-						 (insert-file-contents file)
-						 (when mode (funcall mode))
-						 (imenu--make-index-alist t)
-						 (goto-line line)
-						 (which-function))))
+		       (buf (Angelique!--get-cached-buffer file mode))
+		       (fn-name (with-current-buffer buf (goto-line line) (which-function)))
 		       (fn-name-len (if (> (length fn-name) 30)
 					(concat (substring fn-name 0 27) "...") fn-name)))
 		  (when fn-name
@@ -887,13 +911,18 @@ If there are more than two windows, separate them with a separator."
 					       '(:inherit font-lock-function-name-face
 							  :weight normal :underline nil)))
 		      (overlay-put ov 'evaporate t))))))
-	    (forward-line))))))
+	    (forward-line)))))
+
+  (add-to-list 'compilation-finish-functions #'Angelique!--which-function-compilation-overlay)
+
   :hook
-  (compilation-filter . ansi-color-compilation-filter)
-  (compilation-finish-functions . Angelique!--which-function-compilation-overlay))
+  (compilation-filter . ansi-color-compilation-filter))
 
 (use-package comint
   :ensure nil
+  :config
+  (define-key comint-mode-map (kbd "M-f") #'comint-history-isearch-backward-regexp)
+  (define-key comint-mode-map (kbd "M-r") nil)
   :custom
   (comint-terminfo-terminal "dumb")
   (comint-input-ring-size 2000))
@@ -1085,12 +1114,13 @@ If there are more than two windows, separate them with a separator."
 		      :background "#89B4FA")
   (set-face-attribute 'corfu-bar nil
 		      :background "#B2FFFF")
-  (setq tab-always-indent 'complete)
-  (setq corfu-preview-current nil)
-  (setq corfu-count 30)
-  (setq corfu-preselect 'prompt)
-  (setq corfu-quit-no-match t)
-  (setq corfu-popupinfo-delay '(1.25 . 0.5))
+  :custom
+  (tab-always-indent 'complete)
+  (corfu-preview-current nil)
+  (corfu-count 30)
+  (corfu-preselect 'prompt)
+  (corfu-quit-no-match t)
+  (corfu-popupinfo-delay '(1.25 . 0.5))
   (corfu-popupinfo-mode 1) ; shows documentation after 'corfu-popupinfo-delay'
   ;; Sort by input history (no need to modify 'corfu-sort-function')
   (with-eval-after-load 'savehist
@@ -1200,7 +1230,7 @@ This is done using `cape-capf-super'."
   (add-hook elisp-capf-hook #'elisp-super-capf))
 
 (defun minibuffer-and-comint-super-capf ()
-  "Enforce super CAPF's in the minibuffer and 'comint-mode'."
+  "Enforce super CAPF's in the minibuffer and `comint-mode'."
   (setq-local completion-at-point-functions
 	      (list (cape-capf-super
 		     #'cape-history
@@ -1214,7 +1244,7 @@ Temporarily disables read-only so Corfu/Cape can insert."
     (completion-at-point)))
 
 (define-key minibuffer-local-completion-map (kbd "TAB") #'corfu-complete)
-(add-hook 'minibuffer-setup-hook #'minibuffer-and-comint-super-capf)
+(add-hook 'minibuffer-setup-hook (lambda () (setq-local completion-at-point-functions (list #'cape-history))))
 (define-key comint-mode-map (kbd "C-M-u") #'Angelique!--comint-or-compilation-complete)
 (add-hook 'comint-mode-hook #'minibuffer-and-comint-super-capf)
 
@@ -1355,38 +1385,39 @@ Or, insert both after #+AUTHOR: if needed."
 	     (t
 	      (insert date-str "\n")
 	      (Angelique!--org-last-modified))))))))
-  
-  (transient-define-prefix Angelique!--org-navigation ()
-    "Transient layout for easier Org navigation."
-    ["Angelique! Org-navigation..."
-     ["Org-roam"
-      ("c" "org-roam-node-find" org-roam-node-find)
-      ("r" "org-roam-node-insert" org-roam-node-insert)
-      ("s" "org-roam-buffer-toggle" org-roam-buffer-toggle)
-      ("u" "org-roam-ui-open" org-roam-ui-open)
-      ("b" "org-roam-db-sync" org-roam-db-sync)]
-     ["Babel & setting properties"
-      ("e" "org-babel-tangle" org-babel-tangle)
-      ("i" "org-insert-block-template" org-insert-block-template)
-      ("d" "org-babel-demarcate-block" org-babel-demarcate-block)
-      ("p" "org-set-property" org-set-property)]
-     ["Search & Link"
-      ("q" "org-ql-search" org-ql-search)
-      ("f" "org-ql-find" org-ql-find)
-      ("l" "org-store-link" org-store-link)
-      ("L" "org-insert-last-stored-link" org-insert-last-stored-link)
-      ("n" "org-insert-link" (lambda () (interactive) (call-interactively #'org-insert-link)))]
-     ["Transclusion & Transcription"
-      ("k" "org-transclusion-add" org-transclusion-add)
-      ("h" "org-transclusion-remove" org-transclusion-remove)]
-     ["Display images"
-      ("o" "org-display-user-inline-images" org-display-user-inline-images)
-      ("O" "org-link-preview" org-link-preview)]
-     ["Misc"
-      ("C-u" "universal-argument" universal-argument :transient t)
-      ("z" "org-table-create-or-convert-from-region" org-table-create-or-convert-from-region :transient t)
-      ("T" "org-timestamp" (lambda () (interactive) (call-interactively #'org-timestamp)))
-      ("x" "org-mode-restart" org-mode-restart :transient t)]])
+
+  (with-eval-after-load 'transient
+    (transient-define-prefix Angelique!--org-navigation ()
+      "Transient layout for easier Org navigation."
+      ["Angelique! Org-navigation..."
+       ["Org-roam"
+	("c" "org-roam-node-find" org-roam-node-find)
+	("r" "org-roam-node-insert" org-roam-node-insert)
+	("s" "org-roam-buffer-toggle" org-roam-buffer-toggle)
+	("u" "org-roam-ui-open" org-roam-ui-open)
+	("b" "org-roam-db-sync" org-roam-db-sync)]
+       ["Babel & setting properties"
+	("e" "org-babel-tangle" org-babel-tangle)
+	("i" "org-insert-block-template" org-insert-block-template)
+	("d" "org-babel-demarcate-block" org-babel-demarcate-block)
+	("p" "org-set-property" org-set-property)]
+       ["Search & Link"
+	("q" "org-ql-search" org-ql-search)
+	("f" "org-ql-find" org-ql-find)
+	("l" "org-store-link" org-store-link)
+	("L" "org-insert-last-stored-link" org-insert-last-stored-link)
+	("n" "org-insert-link" (lambda () (interactive) (call-interactively #'org-insert-link)))]
+       ["Transclusion & Transcription"
+	("k" "org-transclusion-add" org-transclusion-add)
+	("h" "org-transclusion-remove" org-transclusion-remove)]
+       ["Display images"
+	("o" "org-display-user-inline-images" org-display-user-inline-images)
+	("O" "org-link-preview" org-link-preview)]
+       ["Misc"
+	("C-u" "universal-argument" universal-argument :transient t)
+	("z" "org-table-create-or-convert-from-region" org-table-create-or-convert-from-region :transient t)
+	("T" "org-timestamp" (lambda () (interactive) (call-interactively #'org-timestamp)))
+	("x" "org-mode-restart" org-mode-restart :transient t)]]))
 
   ;;; Go to man pages in org mode.
   (with-eval-after-load 'org (require 'ol-man))
@@ -1518,7 +1549,8 @@ Or, insert both after #+AUTHOR: if needed."
   (c-ts-mode-indent-offset 8)
   :hook
   (c-ts-mode . (lambda ()
-		 (setq-local indent-tabs-mode nil))))
+		 (setq-local indent-tabs-mode nil)
+		 (setq-local subword-mode t))))
 
 (use-package ess
   :ensure t)
@@ -1539,8 +1571,8 @@ Or, insert both after #+AUTHOR: if needed."
 
 (use-package python
   :ensure nil
-  :config
-  (setq python-shell-interpreter "/usr/bin/ipython")
+  :custom
+  (python-shell-interpreter "/usr/bin/ipython")
   ;; (if (executable-find "~/.venv/bin/ipython3")
   ;;     (setq python-shell-interpreter "~/.venv/bin/ipython3")
   ;;   (setq python-shell-interpreter "~/.venv/bin/python3.13"))
