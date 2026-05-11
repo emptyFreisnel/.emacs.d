@@ -61,6 +61,10 @@
 If you experience freezing, decrease this.
 If you experience stuttering, increase this.")
 
+;; (use-package startup
+;;   :ensure nil
+;;   :hook)
+
 (add-hook 'emacs-startup-hook
 	  (lambda ()
 	    (if (boundp 'after-focus-change-function)
@@ -176,7 +180,7 @@ If you experience stuttering, increase this.")
   (ibuffer-project-use-cache t)
   ;; Lovingly taken and amended from
   ;; https://github.com/seagle0128/.emacs.d/blob/master/lisp/init-ibuffer.el
-  ;; which enriches ibuffer to be more cute and have icons
+  ;; enriching ibuffer to be more cute and have icons
   (ibuffer-project-root-functions
    `((ibuffer-project-project-root
       . ,(concat (nerd-icons-octicon "nf-oct-repo"
@@ -200,7 +204,8 @@ If you experience stuttering, increase this.")
     (setq ibuffer-filter-groups (ibuffer-project-generate-filter-groups))
     (unless (eq ibuffer-sorting-mode 'project-file-relative)
       (ibuffer-do-sort-by-project-file-relative)))
-  :hook (ibuffer . ibuffer-project-function))
+  :hook
+  (ibuffer . ibuffer-project-function))
 
 ;; ============================================================================
 ;;  Dashboard...because emacs needs to be cute!!!
@@ -263,8 +268,7 @@ If you experience stuttering, increase this.")
 ;;  something to foreground overrides font-lock syntax highlighting...
 ;; ============================================================================
 
-;; using daemon-mode...use default-frame-alist instead of
-;; set-frame-font. also also, use menu-set-font to check out new fonts.
+;; use menu-set-font to check out new fonts.
 ;; https://www.gnu.org/software/emacs/manual/html_node/emacs/Fonts.html
 
 ;; (add-to-list 'default-frame-alist '(font . "JetBrains Mono Nerd Font 12"))
@@ -278,7 +282,7 @@ If you experience stuttering, increase this.")
 
 (add-to-list 'initial-frame-alist '(fullscreen . maximized))
 
-(defun Angelique!--current-frame-customisations (&optional frame)
+(defun Angelique!/current-frame-customisations (&optional frame)
 
   "For various aesthetic customisations to be loaded in FRAME.
 This will hopefully make sure that emacsclient also
@@ -303,9 +307,9 @@ inherit the customisations properly."
     (set-face-attribute 'line-number-current-line nil
 			:foreground "cyan")))
 
-(add-hook 'elpaca-after-init-hook #'Angelique!--current-frame-customisations)
+(add-hook 'elpaca-after-init-hook #'Angelique!/current-frame-customisations)
 (if (daemonp) (add-hook 'server-after-make-frame-hook
-			#'Angelique!--current-frame-customisations))
+			#'Angelique!/current-frame-customisations))
 
 ;; ============================================================================
 ;;  Setting up Angelique! folder for my own custom
@@ -313,29 +317,29 @@ inherit the customisations properly."
 ;;  Some customisations that did not thematically fit go here for now.
 ;; ============================================================================
 
-;; not using customize feature.
-(setq custom-file null-device)
+(use-package emacs
+  :custom
+  ;; not using customize feature.
+  (custom-file null-device)
+  ;; easier pop from C-u C-SPC
+  (set-mark-command-repeat-pop t)
+  ;; shift-select-mode set to permanent
+  (shift-select-mode 'permanent)
+  
+  :config
+  ;; No need for ~ files when editing
+  (setq-default create-lockfiles nil)
 
-;; easier pop from C-u C-SPC
-(setq set-mark-command-repeat-pop t)
+  (defvar Angelique! (expand-file-name "Angelique!/" user-emacs-directory))
+  (defvar 庭園の王女 (expand-file-name "庭園の王女/" Angelique!))
 
-;; shift-select-mode set to permanent
-(setq shift-select-mode 'permanent)
+  (unless (file-directory-p Angelique!)
+    (make-directory Angelique! t))
+  (unless (file-directory-p 庭園の王女)
+    (make-directory 庭園の王女 t)))
 
-;; No need for ~ files when editing
-(setq-default create-lockfiles nil)
-
-(require 'server)
-(unless (server-running-p)
-  (server-start))
-
-(defvar Angelique! (expand-file-name "Angelique!/" user-emacs-directory))
-(defvar 庭園の王女 (expand-file-name "庭園の王女/" Angelique!))
-
-(unless (file-directory-p Angelique!)
-  (make-directory Angelique! t))
-(unless (file-directory-p 庭園の王女)
-  (make-directory 庭園の王女 t))
+;; (use-package Angelique
+;;   :load-path nil)
 
 ;; ============================================================================
 ;;  Home row keybindings...and packages that assist in moving sentences.
@@ -353,14 +357,14 @@ inherit the customisations properly."
   :commands (avy-goto-char-2
 	     avy-goto-char-timer)
   :config
-  (defun Angelique!--avy-action-helpful (pt)
+  (defun Angelique!/avy-action-helpful (pt)
     (save-excursion
       (goto-char pt)
       (helpful-at-point))
     (select-window (cdr (ring-ref avy-ring 0))) t)
 
   (with-eval-after-load 'transient
-    (transient-define-prefix Angelique!--avy-commands ()
+    (transient-define-prefix Angelique!/avy-commands ()
       "Transient inteface for avy commands."
       ["Angelique! avy-commands..."
        ["Goto"
@@ -380,17 +384,17 @@ inherit the customisations properly."
 		      (avy-goto-char . avy-order-closest)
 		      (avy-goto-char-timer . avy-order-closest)
 		      (avy-goto-char-line . avy-order-closest)))
-  (avy-dispatch-alist '((?q . avy-action-kill-move)
-			(?Q . avy-action-kill-stay)
-			(?w . avy-action-teleport)
-			(?W . avy-action-mark)
-			(?k . avy-action-copy)
+  (avy-dispatch-alist '((?k . avy-action-kill-move)
+			(?K . avy-action-kill-stay)
+			(?t . avy-action-teleport)
+			(?m . avy-action-mark)
+			(?c . avy-action-copy)
 			(?y . avy-action-yank)
 			(?Y . avy-action-yank-line)
 			(?z . avy-action-zap-to-char)
-			(?h . Angelique!--avy-action-helpful)))
+			(?h . Angelique!/avy-action-helpful)))
   :bind
-  ("M-r" . Angelique!--avy-commands))
+  ("M-r" . Angelique!/avy-commands))
 
 (use-package crux
   :ensure t
@@ -403,7 +407,7 @@ inherit the customisations properly."
   :ensure t
   :config
 
-  (defun Angelique!--normal-cursor ()
+  (defun Angelique!/normal-cursor ()
     "Cursor indicator for Angelique!"
     (interactive)
     (setq-default cursor-type 'box)
@@ -414,7 +418,7 @@ inherit the customisations properly."
 	      "🩵(💠ᴗ͈ˬᴗ͈)🩵* Angelique! navigation deactivated! 🩵(💠ᴗ͈ˬᴗ͈)🩵*"
 	      'face `(:foreground "cyan"))))
 
-  (defun Angelique!--keybinds ()
+  (defun Angelique!/keybinds ()
     "~Dream the good dream, like a good pretty-princess should!♡(✿ᴗ͈ˬᴗ͈)♡*~."
     (interactive)
     (setq-default cursor-type 'bar)
@@ -426,8 +430,8 @@ inherit the customisations properly."
 	      'face `(:foreground "#FF83FA"))))
 
   (global-set-key (kbd "M-i")
-   (defhydra Angelique!--hydra-map
-     (:pre Angelique!--keybinds :post Angelique!--normal-cursor :color red)
+   (defhydra Angelique!/hydra-map
+     (:pre Angelique!/keybinds :post Angelique!/normal-cursor :color red)
      ;; Normal navigation.
      ("n" backward-char)
      ("e" next-line)
@@ -457,7 +461,7 @@ inherit the customisations properly."
      ;; Misc
      ("M-i" nil "Quit"))))
 
-(defmacro Angelique!--compile-template (name compile-func)
+(defmacro Angelique!/compile-template (name compile-func)
   "Macro to have compilation / recompilation to take inputs.
 `NAME' is the template for the function name and `COMPILE-FUNC'
 is the template for the functions`compile' and `recompile'."
@@ -465,23 +469,20 @@ is the template for the functions`compile' and `recompile'."
      (interactive (let* ((current-prefix-arg '(4)))
 		    (call-interactively #',compile-func)))))
 
-(defun Angelique!--universal-compile ()
-  "Invoke the `compile' command with prefix arg programmatically."
-  (interactive)
-  (let* ((current-prefix-arg '(4)))
-    (call-interactively #'compile)))
+(Angelique!/compile-template Angelique!/universal-recompile compile)
+(Angelique!/compile-template Angelique!/universal-compile recompile)
 
 (with-eval-after-load 'transient
-  (transient-define-prefix Angelique!--easy-commands ()
+  (transient-define-prefix Angelique!/easy-commands ()
     "Transient layout for commands that has very frequent use."
-    ["Angelique! easy-commands..."
+    ["Angelique!/easy-commands..."
      ["Shell & Compile"
       ("v" "vterm" vterm)
       ("V" "vterm-other-window" vterm-other-window)
       ("E" "eshell" eshell)
       ("c" "compile" compile)
-      ("r" "recompile" recompile)
-      ("a" "Angelique!--universal-compile" Angelique!--universal-compile)]
+      ("r" "Angelique!/universal-recompile" Angelique!/universal-recompile)
+      ("a" "Angelique!/universal-compile" Angelique!/universal-compile)]
      ["winner-undo"
       ("u" "winner-undo" winner-undo :transient t)]
      ["eglot"
@@ -495,18 +496,9 @@ is the template for the functions`compile' and `recompile'."
       ("s" "scratch-buffer" scratch-buffer)]]))
 
 (use-package move-text
-  :ensure t)
-
-(define-key global-map (kbd "C-c c") 'Angelique!--easy-commands)
-
-;; additional defined keys here...
-(define-key global-map (kbd "C-M-c") 'treesit-up-list)
-(define-key global-map (kbd "C-M-d") 'treesit-down-list)
-(define-key global-map (kbd "M-p") 'duplicate-line)
-
-;; disabled commands go here...
-(define-key global-map (kbd "C-x m") nil)
-(define-key global-map (kbd "C-x n n") nil)
+  :ensure t
+  :config
+  (move-text-default-bindings))
 
 ;; ============================================================================
 ;;  Prevent the cursor from going into the minibuffer prompt.
@@ -533,7 +525,7 @@ is the template for the functions`compile' and `recompile'."
   (interactive "nEnter precision multiplier: ")
   (setq precision-number (max 1 arg)))
 
-(defmacro Angelique!--resize-cmd (name window-func)
+(defmacro Angelique!/resize-cmd (name window-func)
   "Macro to resize window using multipliers.
 `NAME' is the template for the function name and `WINDOW-FUNC'
 is the template for one of the following functions:
@@ -546,22 +538,22 @@ is the template for one of the following functions:
      (interactive)
      (,window-func (* base-number precision-number))))
 
-(Angelique!--resize-cmd Angelique!--enlarge-window-horizontally
+(Angelique!/resize-cmd Angelique!/enlarge-window-horizontally
 			enlarge-window-horizontally)
-(Angelique!--resize-cmd Angelique!--enlarge-window
+(Angelique!/resize-cmd Angelique!/enlarge-window
 			enlarge-window)
-(Angelique!--resize-cmd Angelique!--shrink-window
+(Angelique!/resize-cmd Angelique!/shrink-window
 			shrink-window)
-(Angelique!--resize-cmd Angelique!--shrink-window-horizontally
+(Angelique!/resize-cmd Angelique!/shrink-window-horizontally
 			shrink-window-horizontally)
 
 (use-package window
   :ensure nil
   :config
   (with-eval-after-load 'transient
-    (transient-define-prefix Angelique!--window-resize-transient ()
+    (transient-define-prefix Angelique!/window-resize-transient ()
       "Transient layout for minute resizing of windows.
-This is preferably activated through Angelique!--window-control!"
+This is preferably activated through Angelique!/window-control!"
       ;; this is to prevent transient from exiting after command input.
       :transient-suffix 'transient--do-stay
       ["Resize windows..."
@@ -569,10 +561,10 @@ This is preferably activated through Angelique!--window-control!"
 	("u" "set-base-number" set-base-number)
 	("y" "set-precision-number" set-precision-number)]
        ["Resize"
-	("n" "Widen"Angelique!--enlarge-window-horizontally)
-	("e" "Heighten" Angelique!--enlarge-window)
-	("i" "Shrink" Angelique!--shrink-window)
-	("o" "Narrow" Angelique!--shrink-window-horizontally)]]))
+	("n" "Widen"Angelique!/enlarge-window-horizontally)
+	("e" "Heighten" Angelique!/enlarge-window)
+	("i" "Shrink" Angelique!/shrink-window)
+	("o" "Narrow" Angelique!/shrink-window-horizontally)]]))
   :custom
   (kill-buffer-quit-windows t)
   (even-window-sizes nil)
@@ -596,23 +588,23 @@ This is preferably activated through Angelique!--window-control!"
   :ensure t
   :config
   (with-eval-after-load 'transient
-    (transient-define-prefix Angelique!--window-control! ()
+    (transient-define-prefix Angelique!/window-control! ()
     "A better interface for window resizing and layout control."
     ["Angelique! window control..."
      ["Rotate"
       ("n" "rotate-frame"
-       (lambda () (interactive) (rotate-frame) (Angelique!--window-control!)))
+       (lambda () (interactive) (rotate-frame) (Angelique!/window-control!)))
       ("e" "rotate-frame-clockwise"
-       (lambda () (interactive) (rotate-frame-clockwise) (Angelique!--window-control!)))
+       (lambda () (interactive) (rotate-frame-clockwise) (Angelique!/window-control!)))
       ("i" "rotate-frame-anticlockwise"
-       (lambda () (interactive) (rotate-frame-anticlockwise) (Angelique!--window-control!)))]
+       (lambda () (interactive) (rotate-frame-anticlockwise) (Angelique!/window-control!)))]
      ["Flip & Transpose"
       ("w" "transpose-frame"
-       (lambda () (interactive) (transpose-frame) (Angelique!--window-control!)))
+       (lambda () (interactive) (transpose-frame) (Angelique!/window-control!)))
       ("l" "flip-frame"
-       (lambda () (interactive) (flip-frame) (Angelique!--window-control!)))
+       (lambda () (interactive) (flip-frame) (Angelique!/window-control!)))
       ("y" "flop-frame"
-       (lambda () (interactive) (flop-frame) (Angelique!--window-control!)))]
+       (lambda () (interactive) (flop-frame) (Angelique!/window-control!)))]
      ["Splitting & Closing"
       ("s" "split-window-right" split-window-right)
       ("S" "split-window-below" split-window-below)
@@ -627,26 +619,26 @@ This is preferably activated through Angelique!--window-control!"
       ("T" "tab-close" tab-close)
       ("O" "tab-bar-move-window-to-tab" tab-bar-move-window-to-tab)]
      ["Resize & Balance"
-      (";" "resize-windows" Angelique!--window-resize-transient)
+      (";" "resize-windows" Angelique!/window-resize-transient)
       (":" "balance-windows" balance-windows)]
      ["Misc"
       ("C-u" "universal-argument" universal-argument)
       ("r" "revert-buffer" revert-buffer)]]))
-  :bind ("M-;" . Angelique!--window-control!))
+  :bind ("M-;" . Angelique!/window-control!))
 
 (use-package ace-window
   :ensure t
   :commands ace-window
   :custom
   (aw-background nil)
-  (aw-keys '(?a ?r ?s ?t ?g ?m ?n ?e ?i))
+  (aw-keys '(?c ?r ?s ?t ?b ?m ?n ?e ?i))
   :bind ("M-o" . ace-window))
 
 ;; ============================================================================
 ;;  Better keyboard quit.
 ;; ============================================================================
 
-(defun Angelique!--keyboard-quit-dwim ()
+(defun Angelique!/keyboard-quit-dwim ()
 
   "Do-What-I-Mean behaviour for a general `keyboard-quit'.
 
@@ -673,7 +665,160 @@ The DWIM behaviour of this command is as follows:
 	(t
 	 (keyboard-quit))))
 
-(define-key global-map (kbd "C-g") #'Angelique!--keyboard-quit-dwim)
+(define-key global-map (kbd "C-g") #'Angelique!/keyboard-quit-dwim)
+
+;; ============================================================================
+;;  LSP completions go here... using eglot.
+;; ============================================================================
+
+(use-package cape
+  :ensure t
+  :commands (cape-dabbrev cape-file cape-elisp-block)
+  :bind ("C-c p" . cape-prefix-map)
+  :init
+  ;; Add to the global default value of `completion-at-point-functions'
+  ;; which is used by `completion-at-point'
+  (add-hook 'completion-at-point-functions #'cape-dabbrev)
+  (add-hook 'completion-at-point-functions #'cape-file)
+  (add-hook 'completion-at-point-functions #'cape-elisp-block)
+  (add-hook 'completion-at-point-functions #'cape-history)
+  (add-hook 'completion-at-point-functions #'cape-keyword))
+
+(use-package corfu
+  :ensure t
+  :bind (:map corfu-map
+	      ("<tab>" . corfu-complete)
+	      ("TAB" . corfu-complete))
+  :config
+  (set-face-attribute 'corfu-current nil
+		      :background "#120333"
+		      :foreground "#B2FFFF")
+  (set-face-attribute 'corfu-border nil
+		      :background "#89B4FA")
+  (set-face-attribute 'corfu-bar nil
+		      :background "#B2FFFF")
+  :custom
+  (tab-always-indent 'complete)
+  (corfu-preview-current nil)
+  (corfu-count 30)
+  (corfu-preselect 'prompt)
+  (corfu-quit-no-match t)
+  (corfu-popupinfo-delay '(1.25 . 0.5))
+  (corfu-popupinfo-mode 1) ; shows documentation after 'corfu-popupinfo-delay'
+  ;; Sort by input history (no need to modify 'corfu-sort-function')
+  (with-eval-after-load 'savehist
+    (corfu-history-mode 1)
+    (add-to-list 'savehist-additional-variables 'corfu-history))
+  :hook
+  (elpaca-after-init . global-corfu-mode))
+
+(use-package eglot
+  :ensure nil
+  :custom
+  (completion-category-overrides '((eglot (styles orderless))
+   				   (eglot-capf (styles orderless))))
+  (eglot-ignored-server-capabilities '(:semanticTokensProvider))
+  :config
+  (advice-add 'eglot-completion-at-point :around #'cape-wrap-buster)
+  :init
+  (defun eglot-setup-completion ()
+    (setq-local completion-at-point-functions
+		(list (cape-capf-super
+		       #'eglot-completion-at-point
+		       #'cape-file
+		       #'cape-dabbrev))))
+  :hook
+  (eglot-managed-mode . eglot-setup-completion)
+  ((ess-mode
+    python-ts-mode
+    c-ts-mode
+    c++-ts-mode
+    csharp-ts-mode
+    rust-ts-mode) . eglot-ensure))
+
+(use-package eldoc-box
+  :ensure t
+  :config
+  (set-face-attribute 'eldoc-box-border nil
+		      :background "#89B4FA")
+  :hook
+  (emacs-lisp-mode . eldoc-box-hover-mode)
+  (eglot-managed-mode . eldoc-box-hover-mode))
+
+(use-package flymake
+  :ensure nil
+  :commands flymake-mode
+  :custom
+  (flymake-indicator-type 'fringes)
+  ;; (flymake-show-diagnostics-at-end-of-line 'fancy)
+  :hook
+  (prog-mode . flymake-mode)
+  ;; getting annoyed by all the warnings flymake is generating
+  ;; because of the byte-compiler. so turning it off for peace of mind...
+  (emacs-lisp-mode . (lambda ()
+		       (remove-hook 'flymake-diagnostic-functions
+				    #'elisp-flymake-byte-compile t))))
+
+(use-package flymake-ruff
+  :ensure t
+  :hook (eglot-managed-mode . flymake-ruff-load))
+
+(use-package sideline-flymake
+  :ensure t)
+
+(use-package sideline-eglot
+  :ensure t)
+
+(use-package sideline
+  :ensure t
+  :init
+  (setq sideline-backends-right '(sideline-flymake
+				  sideline-eglot))
+  (setq sideline-order-right 'up
+	sideline-display-backend-name t)
+  :hook
+  (flymake-mode . sideline-mode)
+  (eglot-managed-mode . sideline-mode))
+
+(use-package breadcrumb
+  :ensure t
+  :config
+  (set-face-attribute 'breadcrumb-face nil
+		      :height 95)
+  :hook
+  (elpaca-after-init . breadcrumb-mode))
+
+(use-package completion-preview
+  :ensure nil
+  :bind
+  (:map completion-preview-active-mode-map
+	("TAB" . nil)
+	("M-i" . nil)
+	;; Shift-Tab (s-TAB)
+	("<backtab>" . completion-preview-insert))
+  :hook
+  (prog-mode . completion-preview-mode)
+  (minibuffer-setup . completion-preview-mode))
+
+(defun elisp-super-capf ()
+  "Unifies `elisp-completion-at-point' for elisp editing.
+This is done using `cape-capf-super'."
+  (setq-local completion-at-point-functions
+	      (list (cape-capf-super
+		     #'elisp-completion-at-point
+		     #'cape-dabbrev))))
+
+(dolist (elisp-capf-hook '(emacs-lisp-mode-hook
+			   lisp-interaction-mode-hook
+			   ielm-mode-hook
+			   org-mode-hook))
+  (add-hook elisp-capf-hook #'elisp-super-capf))
+
+;; remember to have codelldb
+(use-package dape
+  :ensure t
+  :custom
+  (dape-request-timeout 30))
 
 ;; ============================================================================
 ;;  Utilities.
@@ -707,7 +852,7 @@ The DWIM behaviour of this command is as follows:
 		      :foreground "#7984D1"
 		      :height 95)
 
-  (defun Angelique!--nerd-icons-tab-bar-tab-name-all ()
+  (defun Angelique!/nerd-icons-tab-bar-tab-name-all ()
     "Generate tab name from buffers of all windows.
 This function concatenates nerd-icons to the tab-names.
 If there are more than two windows, separate them with a separator."
@@ -729,7 +874,7 @@ If there are more than two windows, separate them with a separator."
 
   (setq tab-bar-separator " ")
     
-  (defun Angelique!--tab-bar-close-button ()
+  (defun Angelique!/tab-bar-close-button ()
     "Propertize tab-bar-close-button to be more pretty <3"
     (interactive)
     (setq tab-bar-close-button
@@ -744,10 +889,10 @@ If there are more than two windows, separate them with a separator."
   (tab-bar-new-tab-choice "*dashboard*")
   (tab-bar-show 1)
   (tab-bar-auto-width nil)
-  (tab-bar-tab-name-function #'Angelique!--nerd-icons-tab-bar-tab-name-all)
+  (tab-bar-tab-name-function #'Angelique!/nerd-icons-tab-bar-tab-name-all)
   :hook
   (elpaca-after-init . tab-bar-mode)
-  (tab-bar-mode . Angelique!--tab-bar-close-button))
+  (tab-bar-mode . Angelique!/tab-bar-close-button))
 
 (use-package delsel
   :ensure nil
@@ -791,8 +936,9 @@ If there are more than two windows, separate them with a separator."
 	 :map minibuffer-local-map
 	 ("C-c C-c" . embark-collect)
 	 ("C-c C-e" . embark-export))
-  :config (set-face-attribute 'embark-target nil
-			      :background "#4B0082"))
+  :config
+  (set-face-attribute 'embark-target nil
+		      :background "#4B0082"))
 
 (use-package embark-consult
   :ensure t)
@@ -847,7 +993,7 @@ If there are more than two windows, separate them with a separator."
 		   (hl-line-mode nil)
 		   (display-line-numbers-mode -1))))
 
-(defvar Angelique!--buffer-cache (make-hash-table :test #'equal)
+(defvar Angelique!/buffer-cache (make-hash-table :test #'equal)
   "Persistent cache to map file names to the following plist.")
 
 (use-package compile
@@ -856,31 +1002,35 @@ If there are more than two windows, separate them with a separator."
   (compile-command nil)
   (compilation-ask-about-save nil)
   :config
-  (defun Angelique!--get-cached-buffer (file mode)
-    (let* ((cached (gethash file Angelique!--buffer-cache))
-	   (mtime (file-attribute-modification-time (file-attributes file))))
-      (if (and cached (equal (cdr cached) mtime))
-	  (progn (message "Angelique!: Referring to cached %s" file)
-		 (car cached))
-	(progn
-	  (when cached (kill-buffer (car cached)))
-	  (let ((b (generate-new-buffer file)))
-	    (with-current-buffer b
-	      (condition-case-unless-debug err
-		  (progn
-		    (insert-file-contents file)
-		    (when mode (funcall mode))
-		    (imenu--make-index-alist t)
-		    ;; (goto-line line)
-		    ;; (which-function)
-		    )
-		(error (message "Angelique!: skipping %s: %s" file (error-message-string err))))
-	      (puthash file (cons b mtime) Angelique!--buffer-cache))
-	    b)))))
 
-  (defun Angelique!--which-function-compilation-overlay (buffer access)
-    (message "Angelique!: overlay called!!")
-    (with-current-buffer buffer
+  (defun Angelique!/cache-lines-to-fn-name (line lines buf)
+    (with-current-buffer buf
+      (let ((fn-name (progn (goto-line line) (which-function))))
+	(puthash line fn-name lines)
+	fn-name)))
+  
+  (defun Angelique!/get-cached-buffer (line file mode)
+    (let* ((cached (gethash file Angelique!/buffer-cache))
+	   (mtime (file-attribute-modification-time (file-attributes file)))
+	   (cached-mtime (plist-get cached :mtime))
+	   (cached-buf (plist-get cached :buffer))
+	   (cached-lines (plist-get cached :lines))
+	   (cached-fn (when cached-lines (gethash line cached-lines))))
+      (cond ((and cached (equal cached-mtime mtime))
+	     (or cached-fn (Angelique!/cache-lines-to-fn-name line cached-lines cached-buf)))
+	    (t (when cached (kill-buffer cached-buf))
+	       (let ((b (generate-new-buffer file))
+		     (lines (make-hash-table :test 'eql)))
+		 (with-current-buffer b
+		   (condition-case-unless-debug err
+		       (progn (insert-file-contents file)
+			      (when mode (funcall mode)))
+		     (error (message "Angelique!: skipping %s: %s" file (error-message-string err)))))
+		 (puthash file (list :buffer b :mtime mtime :lines lines) Angelique!/buffer-cache)
+		 (Angelique!/cache-lines-to-fn-name line lines b))))))
+      
+  (defun Angelique!/which-function-compilation-overlay (compilation-buffer access)
+    (with-current-buffer compilation-buffer
       (save-excursion
 	;; jit lock fontification is lazily evaluated; ensure font-lock so that
 	;; the overlay can render properly when command is invoked in another buffer
@@ -895,8 +1045,7 @@ If there are more than two windows, separate them with a separator."
 		       (line (compilation--loc->line loc))
 		       (file (caar (compilation--loc->file-struct loc)))
 		       (mode (assoc-default file auto-mode-alist #'string-match))
-		       (buf (Angelique!--get-cached-buffer file mode))
-		       (fn-name (with-current-buffer buf (goto-line line) (which-function)))
+		       (fn-name (Angelique!/get-cached-buffer line file mode))
 		       (fn-name-len (if (> (length fn-name) 30)
 					(concat (substring fn-name 0 27) "...") fn-name)))
 		  (when fn-name
@@ -913,7 +1062,7 @@ If there are more than two windows, separate them with a separator."
 		      (overlay-put ov 'evaporate t))))))
 	    (forward-line)))))
 
-  (add-to-list 'compilation-finish-functions #'Angelique!--which-function-compilation-overlay)
+  (add-to-list 'compilation-finish-functions #'Angelique!/which-function-compilation-overlay)
 
   :hook
   (compilation-filter . ansi-color-compilation-filter))
@@ -921,11 +1070,29 @@ If there are more than two windows, separate them with a separator."
 (use-package comint
   :ensure nil
   :config
+  (defun Angelique!/comint-or-compilation-complete ()
+    "Completion at point for comint or compilation buffers.
+Temporarily disables read-only so Corfu/Cape can insert."
+    (interactive)
+    (let ((inhibit-read-only t))
+      (completion-at-point)))
+
+  (with-eval-after-load 'cape
+    (defun Angelique!/comint-super-capf ()
+      "Enforce super CAPF's in `comint-mode'."
+      (setq-local completion-at-point-functions
+		  (list (cape-capf-super
+			 #'cape-history
+			 #'comint-completion-at-point)))))
+
+  (define-key comint-mode-map (kbd "C-M-u") #'Angelique!/comint-or-compilation-complete)
   (define-key comint-mode-map (kbd "M-f") #'comint-history-isearch-backward-regexp)
   (define-key comint-mode-map (kbd "M-r") nil)
   :custom
   (comint-terminfo-terminal "dumb")
-  (comint-input-ring-size 2000))
+  (comint-input-ring-size 2000)
+  :hook
+  (comint-mode . Angelique!/comint-super-capf))
 
 (use-package comint-mime
   :ensure t
@@ -1079,180 +1246,18 @@ If there are more than two windows, separate them with a separator."
 
 (use-package savehist
   :ensure nil
-  :config
-  (setq history-length 2000)
+  :custom
+  (history-length 2000)
   :hook (elpaca-after-init . savehist-mode))
 
-;; ============================================================================
-;;  LSP completions go here... using eglot.
-;; ============================================================================
-
-(use-package cape
-  :ensure t
-  :commands (cape-dabbrev cape-file cape-elisp-block)
-  :bind ("C-c p" . cape-prefix-map)
-  :init
-  ;; Add to the global default value of `completion-at-point-functions'
-  ;; which is used by `completion-at-point'
-  (add-hook 'completion-at-point-functions #'cape-dabbrev)
-  (add-hook 'completion-at-point-functions #'cape-file)
-  (add-hook 'completion-at-point-functions #'cape-elisp-block)
-  (add-hook 'completion-at-point-functions #'cape-history)
-  (add-hook 'completion-at-point-functions #'cape-keyword))
-
-(use-package corfu
-  :ensure t
-  :hook (elpaca-after-init . global-corfu-mode)
-  :bind (:map corfu-map
-	      ("<tab>" . corfu-complete)
-	      ("TAB" . corfu-complete))
-  :config
-  (set-face-attribute 'corfu-current nil
-		      :background "#120333"
-		      :foreground "#B2FFFF")
-  (set-face-attribute 'corfu-border nil
-		      :background "#89B4FA")
-  (set-face-attribute 'corfu-bar nil
-		      :background "#B2FFFF")
-  :custom
-  (tab-always-indent 'complete)
-  (corfu-preview-current nil)
-  (corfu-count 30)
-  (corfu-preselect 'prompt)
-  (corfu-quit-no-match t)
-  (corfu-popupinfo-delay '(1.25 . 0.5))
-  (corfu-popupinfo-mode 1) ; shows documentation after 'corfu-popupinfo-delay'
-  ;; Sort by input history (no need to modify 'corfu-sort-function')
-  (with-eval-after-load 'savehist
-    (corfu-history-mode 1)
-    (add-to-list 'savehist-additional-variables 'corfu-history)))
-
-(use-package eglot
+(use-package minibuffer
   :ensure nil
-  :custom
-  (completion-category-overrides '((eglot (styles orderless))
-   				   (eglot-capf (styles orderless))))
-  (eglot-ignored-server-capabilities '(:semanticTokensProvider))
   :config
-  (advice-add 'eglot-completion-at-point :around #'cape-wrap-buster)
-  :init
-  (defun eglot-setup-completion ()
-    (setq-local completion-at-point-functions
-		(list (cape-capf-super
-		       #'eglot-completion-at-point
-		       #'cape-file
-		       #'cape-dabbrev))))
+  (define-key minibuffer-local-completion-map (kbd "TAB") #'corfu-complete)
   :hook
-  (eglot-managed-mode . eglot-setup-completion)
-  ((ess-mode
-    python-ts-mode
-    c-ts-mode
-    c++-ts-mode
-    csharp-ts-mode
-    rust-ts-mode) . eglot-ensure))
-
-(use-package eldoc-box
-  :ensure t
-  :config
-  (set-face-attribute 'eldoc-box-border nil
-		      :background "#89B4FA")
-  :hook
-  (emacs-lisp-mode . eldoc-box-hover-mode)
-  (eglot-managed-mode . eldoc-box-hover-mode))
-
-(use-package flymake
-  :ensure nil
-  :commands flymake-mode
-  :custom
-  (flymake-indicator-type 'fringes)
-  ;; (flymake-show-diagnostics-at-end-of-line 'fancy)
-  :hook
-  (prog-mode . flymake-mode)
-  ;; getting annoyed by all the warnings flymake is generating
-  ;; because of the byte-compiler. so turning it off for peace of mind...
-  (emacs-lisp-mode . (lambda ()
-		       (remove-hook 'flymake-diagnostic-functions
-				    #'elisp-flymake-byte-compile t))))
-
-(use-package flymake-ruff
-  :ensure t
-  :hook (eglot-managed-mode . flymake-ruff-load))
-
-(use-package sideline-flymake
-  :ensure t)
-
-(use-package sideline-eglot
-  :ensure t)
-
-(use-package sideline
-  :ensure t
-  :hook
-  (flymake-mode . sideline-mode)
-  (eglot-managed-mode . sideline-mode)
-  :init
-  (setq sideline-backends-right '(sideline-flymake
-				  sideline-eglot))
-  (setq sideline-order-right 'up
-	sideline-display-backend-name t))
-
-(use-package breadcrumb
-  :ensure t
-  :config
-  (set-face-attribute 'breadcrumb-face nil
-		      :height 95)
-  :hook
-  (elpaca-after-init . breadcrumb-mode))
-
-(use-package completion-preview
-  :ensure nil
-  :bind
-  (:map completion-preview-active-mode-map
-	("TAB" . nil)
-	("M-i" . nil)
-	;; Shift-Tab (s-TAB)
-	("<backtab>" . completion-preview-insert))
-  :hook
-  (prog-mode . completion-preview-mode)
-  (minibuffer-setup . completion-preview-mode))
-
-(defun elisp-super-capf ()
-  "Unifies `elisp-completion-at-point' for elisp editing.
-This is done using `cape-capf-super'."
-  (setq-local completion-at-point-functions
-	      (list (cape-capf-super
-		     #'elisp-completion-at-point
-		     #'cape-dabbrev))))
-
-(dolist (elisp-capf-hook '(emacs-lisp-mode-hook
-			   lisp-interaction-mode-hook
-			   ielm-mode-hook
-			   org-mode-hook))
-  (add-hook elisp-capf-hook #'elisp-super-capf))
-
-(defun minibuffer-and-comint-super-capf ()
-  "Enforce super CAPF's in the minibuffer and `comint-mode'."
-  (setq-local completion-at-point-functions
-	      (list (cape-capf-super
-		     #'cape-history
-		     #'comint-completion-at-point))))
-
-(defun Angelique!--comint-or-compilation-complete ()
-  "Completion at point for comint or compilation buffers.
-Temporarily disables read-only so Corfu/Cape can insert."
-  (interactive)
-  (let ((inhibit-read-only t))
-    (completion-at-point)))
-
-(define-key minibuffer-local-completion-map (kbd "TAB") #'corfu-complete)
-(add-hook 'minibuffer-setup-hook (lambda () (setq-local completion-at-point-functions (list #'cape-history))))
-(define-key comint-mode-map (kbd "C-M-u") #'Angelique!--comint-or-compilation-complete)
-(add-hook 'comint-mode-hook #'minibuffer-and-comint-super-capf)
-
-;; remember to have codelldb
-(use-package dape
-  :ensure t
-  :custom
-  (dape-request-timeout 30))
+  (minibuffer-setup . (lambda ()
+			(setq-local completion-at-point-functions
+				    (list #'cape-history)))))
 
 ;; ============================================================================
 ;;  Treesitter...and configuring the modes to the correct ones...
@@ -1283,7 +1288,7 @@ Temporarily disables read-only so Corfu/Cape can insert."
 		      :slant 'italic))
 
 ;; ============================================================================
-;;  Configure Dired
+;;  Configure Dired and trashed
 ;; ============================================================================
 
 (use-package dired
@@ -1357,7 +1362,7 @@ Temporarily disables read-only so Corfu/Cape can insert."
 		      :inherit 'markdown-pre-face
 		      :background "#3b4167")
 
-  (defun Angelique!--org-last-modified ()
+  (defun Angelique!/org-last-modified ()
     "Insert or update the #+LAST_MODIFIED: line at point."
     (let ((insert-point (point))
 	  (mod-str (format-time-string "#+LAST_MODIFIED: [%Y-%m-%d %A %H:%M]")))
@@ -1366,7 +1371,7 @@ Temporarily disables read-only so Corfu/Cape can insert."
 	(goto-char insert-point)
 	(insert mod-str "\n"))))
   
-  (defun Angelique!--org-update-last-modified ()
+  (defun Angelique!/org-update-last-modified ()
     "Ensure #+LAST_MODIFIED is updated just after #+DATE:.
 Or, insert both after #+AUTHOR: if needed."
     (when (derived-mode-p 'org-mode)
@@ -1381,13 +1386,13 @@ Or, insert both after #+AUTHOR: if needed."
 	     ;; if DATE exists, move past it and update/insert LAST_MODIFIED
 	     ((looking-at "^#\\+DATE:.*")
 	      (forward-line 1)
-	      (Angelique!--org-last-modified))
+	      (Angelique!/org-last-modified))
 	     (t
 	      (insert date-str "\n")
-	      (Angelique!--org-last-modified))))))))
+	      (Angelique!/org-last-modified))))))))
 
   (with-eval-after-load 'transient
-    (transient-define-prefix Angelique!--org-navigation ()
+    (transient-define-prefix Angelique!/org-navigation ()
       "Transient layout for easier Org navigation."
       ["Angelique! Org-navigation..."
        ["Org-roam"
@@ -1423,7 +1428,7 @@ Or, insert both after #+AUTHOR: if needed."
   (with-eval-after-load 'org (require 'ol-man))
   
   :bind
-  (("C-c o" . Angelique!--org-navigation)
+  (("C-c o" . Angelique!/org-navigation)
    :map org-mode-map
    ;; remove org-deadline as binding...
    ("C-c C-d" . nil))
@@ -1473,7 +1478,7 @@ Or, insert both after #+AUTHOR: if needed."
       "SOMEDAY")))
   :hook
   (org-mode . org-link-preview-refresh)
-  (before-save . Angelique!--org-update-last-modified))
+  (before-save . Angelique!/org-update-last-modified))
 
 (use-package org-remoteimg
   :ensure (:host github :repo "gaoDean/org-remoteimg")
@@ -1572,11 +1577,7 @@ Or, insert both after #+AUTHOR: if needed."
 (use-package python
   :ensure nil
   :custom
-  (python-shell-interpreter "/usr/bin/ipython")
-  ;; (if (executable-find "~/.venv/bin/ipython3")
-  ;;     (setq python-shell-interpreter "~/.venv/bin/ipython3")
-  ;;   (setq python-shell-interpreter "~/.venv/bin/python3.13"))
-  )
+  (python-shell-interpreter "/usr/bin/ipython3"))
 
 (use-package glsl-mode
   :ensure t)
