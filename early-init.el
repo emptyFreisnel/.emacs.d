@@ -65,13 +65,15 @@
   ;;  Minibuffer settings
   (enable-recursive-minibuffers t)
   (minibuffer-depth-indicate-mode 1)
+
+  ;;  Always confirm when exiting emacs
+  (confirm-kill-emacs #'y-or-n-p)
   
   ;;  Startup
   (inhibit-startup-screen t)
   (inhibit-startup-message t)
   (inhibit-startup-echo-area-message t)
   (initial-scratch-message nil)
-  (confirm-kill-emacs #'y-or-n-p)
 
   :config
   ;;  Disable bidirectional text scanning.
