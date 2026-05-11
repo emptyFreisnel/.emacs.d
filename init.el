@@ -63,7 +63,8 @@ If you experience stuttering, increase this.")
 
 ;; (use-package startup
 ;;   :ensure nil
-;;   :hook)
+;;   :hook
+;;   (emacs-startup . ))
 
 (add-hook 'emacs-startup-hook
 	  (lambda ()
